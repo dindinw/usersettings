@@ -15,3 +15,4 @@ file_export_version=3.0
 /instance/org.eclipse.ui.editors/lineNumberRuler=true
 /instance/org.eclipse.ui.editors/spacesForTabs=true
 /instance/org.eclipse.ui.editors/showEnclosedSpaces=
+/instance/org.eclipse.core.resources/encoding=UTF-8
