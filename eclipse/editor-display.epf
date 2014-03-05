@@ -5,13 +5,13 @@
 # Created by the Workspace Mechanic Preference Recorder
 #Wed Mar 05 10:29:39 CST 2014
 /instance/org.eclipse.ui.editors/showLineFeed=
-/instance/org.eclipse.ui.editors/showEnclosedTabs=
+/instance/org.eclipse.ui.editors/showEnclosedTabs=true
 /instance/org.eclipse.ui.editors/printMargin=true
 /instance/org.eclipse.ui.editors/showWhitespaceCharacters=true
 file_export_version=3.0
 /instance/org.eclipse.ui.editors/printMarginColumn=100
 /instance/org.eclipse.ui.editors/showCarriageReturn=
-/instance/org.eclipse.ui.editors/showLeadingTabs=
+/instance/org.eclipse.ui.editors/showLeadingTabs=true
 /instance/org.eclipse.ui.editors/lineNumberRuler=true
 /instance/org.eclipse.ui.editors/spacesForTabs=true
 /instance/org.eclipse.ui.editors/showEnclosedSpaces=
