@@ -24,7 +24,18 @@ Win
 Java
 ====
 
-* JDK
+Linux
+-----
+### JDK
+ 
+
+#### OpenJDK 
+    sudo apt-get install openjdk-7-jdk openjdk-7-source
+    sudo update-java-alternatives -s java-1.7.0-openjdk-i386    
+#### Oracle JDK
+* NOTE: JDK 8 released on 18 March 2013.
+     
+
 * Maven
 
 Javascript
