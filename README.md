@@ -13,12 +13,13 @@ Mac
 ---
 
 ### Xcode
+### Homebrew
 
 Win
 ---
 
-* Cgwin
-* VC
+### Cgwin
+### VC Express
 
 Java
 ====
