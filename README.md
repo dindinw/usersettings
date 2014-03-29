@@ -1,11 +1,49 @@
-usersettings
-============
+ The instructions of how to set up developer environment under various platform and a collection of useful developer environment setting script and files.
 
-Collection of useful user setting files. For exmple, the display format for code editor.
+Basic Build Env
+===============
 
+Linux
+-----
+### Gcc/make
+
+    sudo apt-get install build-essential 
+
+Mac
+---
+
+### Xcode
+
+Win
+---
+
+* Cgwin
+* VC
+
+Java
+====
+
+* JDK
+* Maven
+
+Javascript
+==========
+
+* NodeJs
+
+Editors
+=======
+
+* VIM
+* Sublime
+
+
+IDE
+===
 
 Eclipse
 -------
+
 The very useful plugin [workspace mechanic][1]
 
 [1]:https://code.google.com/a/eclipselabs.org/p/workspacemechanic/
