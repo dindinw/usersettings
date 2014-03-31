@@ -11,7 +11,8 @@
     "variants":
     [
         {
-            "cmd": ["cmd","/K","test"],
+            //"cmd": ["xterm -e 'source $file;bash '"],
+            "cmd": ["xterm -e 'sh +x $file;read -p Press_ENTER_to_Exit.'"],
             "name": "test1",
             "windows": 
              {
