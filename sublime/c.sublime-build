@@ -1,0 +1,14 @@
+{
+      "cmd": [
+        "start","cmd", "/K" , "g++", "-Wall", "-time", "$file", "-o", "$file_base_name"
+      ],
+      "selector": "source.c",
+      "shell": true,
+      "variants":
+        [
+            {
+                "name": "Run",
+                "cmd": ["start","cmd", "/K" , "$file_base_name"]
+            }
+        ]
+}

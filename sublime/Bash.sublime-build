@@ -1,0 +1,17 @@
+{
+    "cmd" : ["bash", "$file"],
+
+    "selector" : "source.sh",
+
+    "windows": 
+    {
+        "cmd" : ["start","cmd","/K", "bash","$file"]
+    },
+
+    "osx": 
+    {
+        "path" : "$PATH:/usr/local/bin:/usr/X11R6/bin:/opt/X11/bin:/usr/texbin"
+    },
+
+    "shell":true
+}

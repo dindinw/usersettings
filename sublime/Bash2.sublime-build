@@ -1,0 +1,29 @@
+{
+    "cmd" : ["bash", "$file"],
+
+    "selector" : "source.sh",
+
+    "osx": 
+    {
+        "path" : "$PATH:/usr/local/bin:/usr/X11R6/bin:/opt/X11/bin:/usr/texbin"
+    },
+
+    "variants":
+    [
+        {
+            "cmd": ["cmd","/K","test"],
+            "name": "test1",
+            "windows": 
+             {
+                "cmd" : ["start","cmd","/K","bash","$file"]
+             },
+             "shell":true
+
+        },
+        {
+            "cmd": ["bash","$file"],
+            "name": "test2",
+            "shell":false,
+        }
+    ],
+}
