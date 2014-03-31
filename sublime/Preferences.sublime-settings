@@ -1,0 +1,9 @@
+{
+    "color_scheme": "Packages/User/Monokai (SL).tmTheme",
+    "ignored_packages":
+    [
+        "Vintageous"
+    ],
+    "tab_size": 4,
+    "translate_tabs_to_spaces": true
+}
