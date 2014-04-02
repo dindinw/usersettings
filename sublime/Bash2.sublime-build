@@ -33,7 +33,7 @@
                 "path" : "$PATH:/usr/local/bin:/usr/X11R6/bin:/opt/X11/bin:/usr/texbin",
                 "cmd" : ["TODO"]
             },
-            "shell":true,
+            "shell":true
         }
-    ],
+    ]
 }
