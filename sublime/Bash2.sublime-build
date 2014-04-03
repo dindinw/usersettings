@@ -7,7 +7,7 @@
     [
         {
             //"cmd": ["xterm -e 'source $file;bash '"],
-            "cmd": ["xterm -e 'sh +x $file;bash'"],
+            "cmd": ["xterm -e 'bash $file;bash'"],
             "name": "Run in External Shell...",  //Ctrl+Shift+P then type "Run in External Shell..."
             "windows": 
             {
@@ -22,7 +22,7 @@
 
         },
         {
-            "cmd": ["xterm -e 'sh +x $file;read -p Press_ENTER_to_Exit.'"], //default in unix
+            "cmd": ["xterm -e 'bash $file;read -p Press_ENTER_to_Exit.'"], //default in unix
             "name": "Run",  //Ctrl+shift+B go here
             "windows": 
             {
