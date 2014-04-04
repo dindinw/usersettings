@@ -35,7 +35,7 @@ function getSysEnv(){
 function setUserEnv(){
     local key=$1
     local value=$2
-    setx $key $value 2>&1 > /dev/null
+    setx "$key" "$value" 2>&1 > /dev/null
 }
 
 ################################################################################
@@ -45,18 +45,24 @@ function setUserEnv(){
 ################################################################################
 function delUserEnv(){
     local key=$1
-    local result=$(queryRegByVarAndKey "$key")
+    local result=$(getUserEnv "$key")
     if [[ -n $result ]]; then 
         reg delete "$uvar" //v "$key" //f 2>&1 > /dev/null
     fi
 }
 
 function setSysEnv(){
-    echo "...TODO"
-
+    local key=$1
+    local value=$2
+    setx "$key" "$value" //M  2>&1 >/dev/null
 }
-function getSysEnv(){
-    echo "...TODO"
+
+function delSysEnv(){
+    local key=$1
+    local result=$(getSysEnv "$key")
+    if [[ -n $result ]]; then 
+        reg delete "$mvar" //v "$key" //f 2>&1 > /dev/null
+    fi
 
 }
 

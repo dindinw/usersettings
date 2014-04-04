@@ -66,3 +66,16 @@ function sysInfo()
     fi
 }
 sysInfo
+
+
+LIGHTGREEN="\[\033[1;32m\]"
+LIGHTRED="\[\033[1;31m\]"
+WHITE="\[\033[0;37m\]"
+RESET="\[\033[0;00m\]"
+function error_test {
+    if [[ $? = "0" ]]; then
+        echo -e "$LIGHTGREEN"
+    else
+        echo -e "$LIGHTRED"
+    fi
+}

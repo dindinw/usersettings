@@ -74,6 +74,8 @@ function preparePlatform()
         fi
         DOWNLOAD_URL=$JDK8_FILE_URL_WIN
         JDK_NAME=$JDK8_NAME
+        # load windows functions
+        . ../lib/func_win.sh
     else
         echo "ERROR"
     fi
@@ -183,27 +185,11 @@ function installJDK_Mac()
     echo "...TODO installJDK_Mac"
 }
 
-function verifyJDKInstalled_Linux()
+function verifyJDKInstalled
 {
-    eval $(echo export JAVA_HOME=$JDK_INSTALL_BASE/$JDK_NAME)
-    eval $(echo export PATH=$JAVA_HOME/bin:$PATH)
-    printenv|grep JAVA_HOME
-    printenv|grep ^PATH
-    java -version
-}
-
-function verifyJDKInstalled_Mac()
-{
-    echo "...TODO verifyJDKInstalled_Mac"
-}
-
-function verifyJDKInstalled_Win()
-{
-    export JAVA_HOME=$JDK_INSTALL_BASE/$JDK_NAME
-    export PATH=$JAVA_HOME/bin:$PATH
-    env|grep JAVA_HOME
-    env|grep ^PATH=
-    java -version
+    pushd "$JDK_INSTALL_BASE/$JDK_NAME/bin"  2>&1 > /dev/null 
+    ./java -version
+    popd  2>&1 >/dev/null 
 }
 
 
@@ -219,10 +205,24 @@ function setupJDKEnv_Mac()
     echo "...TODO setupJDKEnv_Mac"
 }
 
+###############################################################################
+#
+#  Setup JAVA_HOME in System enviroment
+###############################################################################
 function setupJDKEnv_Win()
 {
-     echo "...TODO setupJDKEnv_Win"
-
+     local javaHome="$JDK_INSTALL_BASE\\$JDK_NAME"
+     local jdkBinPath="%JAVA_HOME%\\bin"
+     setSysEnv "JAVA_HOME" "$javaHome"
+     local oldPath=$(getSysEnv "PATH")
+     echo "$oldPath"|grep "^%JAVA_HOME%" 2>&1 >/dev/null # Test if set before
+     if [[ ! $? -eq 0 ]]; then
+        setSysEnv "PATH" "$jdkBinPath;$oldPath"
+     fi
+     echo "====================================================================="
+     echo "JAVA_HOME : $(getSysEnv "JAVA_HOME")"
+     echo "     PATH : $(getSysEnv "PATH")"
+     echo "====================================================================="
 }
 
 function main()
@@ -232,10 +232,11 @@ function main()
     downlaodJDK
     echo "Install $JDK_FILE ..."
     #installJDK_$OS
-    echo "Verify $JDK_HOME installed ..."
-    verifyJDKInstalled_$OS
-    echo "Setup $JDK_NAME ..."
+    echo "Verify $JDK_NAME installed ..."
+    verifyJDKInstalled
+    echo "Setup $JDK_NAME Env ..."
     setupJDKEnv_$OS
+    echo "ALL Done!"
 }
 
 . ../lib/core.sh

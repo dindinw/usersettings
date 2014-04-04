@@ -35,5 +35,16 @@ echo "Test setUserEnv and delUserEnv..."
 echo "========================================================================="
 setUserEnv "FOO" "BAR"
 getUserEnv "FOO"
+getAllUserEnv
 delUserEnv "FOO"
-getUserEnv "FOO"
+getAllUserEnv
+
+
+echo "========================================================================="
+echo "Test setSysEnv and delSysEnv..."
+echo "========================================================================="
+setSysEnv "FOO" "BAR"
+getSysEnv "FOO"
+getAllSysEnv
+delSysEnv "FOO"
+getAllSysEnv
