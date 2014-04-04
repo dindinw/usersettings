@@ -31,9 +31,6 @@ INSTALL_BASE=~/_devtools
 JDK_INSTALL_BASE=$INSTALL_BASE/java/jdk
 
 # Globle Var
-OS=
-MACH=
-FILE_EXT=
 DOWNLOAD_URL=
 JDK_FILE=
 JDK_FILE_CHECKSUM=
@@ -43,13 +40,11 @@ FORCE_DOWNLOAD=false
 
 function preparePlatform()
 {
-    OS=$(uname)
-    MACH=$(uname -m)
-    #echo "OS Platfrom : $OS"
-    #echo "    Machine : $MACH"
-    if [[ "$OS" == "Linux" ]]; then
+    if [[ $OS == "UNKNOWN" ]]; then echo ERROR; exit -1; fi
+    
+    if [[ "$OS" == "$OS_LINUX" ]]; then
         DOWNLOAD_DIR=~/Downloads
-        if [[ "$MACH" == "x86_64" ]]; then
+        if [[ "$MACH" == "$MACH_64" ]]; then
             #64 bit
             JDK8_FILE_URL_LINUX=$JDK8_FILE_URL_LINUX_64
             JDK_FILE_CHECKSUM=$JDK8_FILE_CHECKSUM_LINUX_64
@@ -61,29 +56,26 @@ function preparePlatform()
         DOWNLOAD_URL=$JDK8_FILE_URL_LINUX
         JDK_NAME=$JDK8_NAME
 
-    elif [[ "$OS" == "Darwin" ]]; then
-        OS="Mac"
+    elif [[ "$OS" == "$OS_MAC" ]]; then
         DOWNLOAD_DIR=~/Downloads
         #TODO
-
-    else #WIN
-        OS="Win"
+    elif [[ "$OS" == "$OS_WIN" ]]; then
         DOWNLOAD_DIR=~/Downloads 
-
         #TODO 32/64bit and Checksum
-        if [[ "$(wmic cpu get addresswidth|awk '$1 ~/64/ {print $1}')" == "64" ]]; then
+        if [[ "$MACH" == "$MACH_64" ]]; then
             # 64 bit
-            MACH=x86_64
             JDK8_FILE_URL_WIN=$JDK8_FILE_URL_WIN_64
             JDK_FILE_CHECKSUM=$JDK8_FILE_CHECKSUM_WIN_64
+            JDK_INSTALL_BASE="C:\Program Files\Java"
         else
             # 32 bit
-            MACH=x86_32
             JDK8_FILE_URL_WIN=$JDK8_FILE_URL_WIN_32
             JDK_FILE_CHECKSUM=$JDK8_FILE_CHECKSUM_WIN_32
         fi
         DOWNLOAD_URL=$JDK8_FILE_URL_WIN
         JDK_NAME=$JDK8_NAME
+    else
+        echo "ERROR"
     fi
     JDK_FILE=$(basename $DOWNLOAD_URL)
     
@@ -94,6 +86,7 @@ function preparePlatform()
     echo "   JDK File : $JDK_FILE"
     echo "   CHECKSUM : $JDK_FILE_CHECKSUM"
     echo " Target JDK : $JDK_NAME"
+    echo "install dir : $JDK_INSTALL_BASE"
     echo "====================================================================="
     
 }
@@ -149,18 +142,36 @@ function downlaodJDK()
     fi
 }
 
+function perpareInstallDir()
+{
+
+    if [ ! -d $INSTALL_BASE ]; then mkdir -m0755 -p $INSTALL_BASE; fi
+    if [ ! -d $JDK_INSTALL_BASE ]; then mkdir -m0755 -p $JDK_INSTALL_BASE; fi
+    chmod -R 755 $INSTALL_BASE
+}
+
 function installJDK_Win()
 {
-    #TODO (How to pass in the /s option)
-    wait $($DOWNLOAD_DIR/$JDK_FILE //s)
+    # TODO, In Win7, can't install jdk to other place than C:\Program Files\Java\jdk1.8.0
+    #perpareInstallDir
+
+    # TODO (How to pass in the /s option) ?
+    #
+    # Acccoding to 
+    #   http://docs.oracle.com/javase/8/docs/technotes/guides/install/windows_jdk_install.html#CHDEBCCJ
+    # JDK, source, no JRE : 
+    #    /s ADDLOCAL="ToolsFeature,SourceFeature"
+    # JDK, source, with JRE :
+    #    /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
+    # JRE in the specified directory C:\test\ :
+    #    /s /INSTALLDIRPUBJRE=C:\test\
+    wait $($DOWNLOAD_DIR/$JDK_FILE //s ADDLOCAL="ToolsFeature,SourceFeature")
 }
 
 function installJDK_Linux()
 {
+    perpareInstallDir
     echo "extracing $JDK_FILE..."
-    if [ ! -d $INSTALL_BASE ]; then mkdir -m0755 -p $INSTALL_BASE; fi
-    if [ ! -d $JDK_INSTALL_BASE ]; then mkdir -m0755 -p $JDK_INSTALL_BASE; fi
-    chmod -R 755 $INSTALL_BASE
     if [ ! -d $JDK_INSTALL_BASE/$JDK_NAME ]; then 
         wait $(tar xzf $DOWNLOAD_DIR/$JDK_FILE -C $JDK_INSTALL_BASE)
     fi
@@ -172,14 +183,34 @@ function installJDK_Mac()
     echo "...TODO installJDK_Mac"
 }
 
-function setupJDKEnv_Linux()
+function verifyJDKInstalled_Linux()
 {
     eval $(echo export JAVA_HOME=$JDK_INSTALL_BASE/$JDK_NAME)
     eval $(echo export PATH=$JAVA_HOME/bin:$PATH)
     printenv|grep JAVA_HOME
     printenv|grep ^PATH
     java -version
-    
+}
+
+function verifyJDKInstalled_Mac()
+{
+    echo "...TODO verifyJDKInstalled_Mac"
+}
+
+function verifyJDKInstalled_Win()
+{
+    export JAVA_HOME=$JDK_INSTALL_BASE/$JDK_NAME
+    export PATH=$JAVA_HOME/bin:$PATH
+    env|grep JAVA_HOME
+    env|grep ^PATH=
+    java -version
+}
+
+
+function setupJDKEnv_Linux()
+{
+
+    echo "...TODO setupJDKEnv_Linux"
 }
 
 function setupJDKEnv_Mac()
@@ -190,18 +221,22 @@ function setupJDKEnv_Mac()
 
 function setupJDKEnv_Win()
 {
-    #TODO
-    echo "...TODO setupJDKEnv_Win"
+     echo "...TODO setupJDKEnv_Win"
+
 }
 
 function main()
 {
+    echo EXECUTE DIR : $(currentDir)
     preparePlatform
     downlaodJDK
     echo "Install $JDK_FILE ..."
     #installJDK_$OS
+    echo "Verify $JDK_HOME installed ..."
+    verifyJDKInstalled_$OS
     echo "Setup $JDK_NAME ..."
     setupJDKEnv_$OS
 }
 
+. ../lib/core.sh
 main
