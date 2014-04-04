@@ -5,7 +5,7 @@ JDK7_FILE_URL_LINUX_64=http://download.oracle.com/otn-pub/java/jdk/7u45-b18/jdk-
 JDK7_FILE_URL_WIN_64=http://download.oracle.com/otn-pub/java/jdk/7u45-b18/jdk-7u45-windows-x64.exe
 
 # JDK 8
-JDK8_NAME=jdk1.8.0    
+JDK8_NAME=jdk1.8.0
 # Linux 
 JDK8_FILE_URL_LINUX_32=http://download.oracle.com/otn-pub/java/jdk/8-b132/jdk-8-linux-i586.tar.gz
 JDK8_FILE_CHECKSUM_LINUX_32=45556e463a561b470bd9d0c07a73effb
@@ -18,11 +18,10 @@ JDK8_FILE_URL_MAC_64=http://download.oracle.com/otn-pub/java/jdk/8-b132/jdk-8-ma
 
 # Windows
 JDK8_FILE_URL_WIN_64=http://download.oracle.com/otn-pub/java/jdk/8-b132/jdk-8-windows-x64.exe
+JDK8_FILE_CHECKSUM_WIN_64=0a577a15cbd9ec7af37ee288e324965e
 
-# File Extension
-FILE_EXT_WIN=.exe
-FILE_EXT_LINUX=.tar.gz
-FILE_EXT_MAC=.dmg
+JDK8_FILE_URL_WIN_32=http://download.oracle.com/otn-pub/java/jdk/8-b132/jdk-8-windows-i586.exe
+JDK8_FILE_CHECKSUM_WIN_32=37d905bfda93619465d63e82b77dbb0e
 
 # Default Download Place
 DOWNLOAD_DIR=
@@ -46,11 +45,9 @@ function preparePlatform()
 {
     OS=$(uname)
     MACH=$(uname -m)
-    echo "OS Platfrom : $OS"
-    echo "    Machine : $MACH"
-    
+    #echo "OS Platfrom : $OS"
+    #echo "    Machine : $MACH"
     if [[ "$OS" == "Linux" ]]; then
-        FILE_EXT=$FILE_EXT_LINUX
         DOWNLOAD_DIR=~/Downloads
         if [[ "$MACH" == "x86_64" ]]; then
             #64 bit
@@ -61,28 +58,44 @@ function preparePlatform()
             JDK8_FILE_URL_LINUX=$JDK8_FILE_URL_LINUX_32
             JDK_FILE_CHECKSUM=$JDK8_FILE_CHECKSUM_LINUX_32
         fi
-        echo "JDK8 Linux URL : $JDK8_FILE_URL_LINUX"
         DOWNLOAD_URL=$JDK8_FILE_URL_LINUX
         JDK_NAME=$JDK8_NAME
 
     elif [[ "$OS" == "Darwin" ]]; then
         OS="Mac"
         DOWNLOAD_DIR=~/Downloads
-
-        echo "JDK8 Mac URL : $JDK8_FILE_URL_MAC"
         #TODO
 
     else #WIN
         OS="Win"
         DOWNLOAD_DIR=~/Downloads 
 
-        #TODO CheckSUM
-        
-        JDK8_FILE_URL_WIN=$JDK8_FILE_URL_WIN_64
-        echo "JDK8 Win URL : $JDK8_FILE_URL_WIN"
+        #TODO 32/64bit and Checksum
+        if [[ "$(wmic cpu get addresswidth|awk '$1 ~/64/ {print $1}')" == "64" ]]; then
+            # 64 bit
+            MACH=x86_64
+            JDK8_FILE_URL_WIN=$JDK8_FILE_URL_WIN_64
+            JDK_FILE_CHECKSUM=$JDK8_FILE_CHECKSUM_WIN_64
+        else
+            # 32 bit
+            MACH=x86_32
+            JDK8_FILE_URL_WIN=$JDK8_FILE_URL_WIN_32
+            JDK_FILE_CHECKSUM=$JDK8_FILE_CHECKSUM_WIN_32
+        fi
         DOWNLOAD_URL=$JDK8_FILE_URL_WIN
+        JDK_NAME=$JDK8_NAME
     fi
     JDK_FILE=$(basename $DOWNLOAD_URL)
+    
+    echo "====================================================================="
+    echo "OS Platfrom : $OS"
+    echo "    Machine : $MACH"
+    echo "        URL : $DOWNLOAD_URL"
+    echo "   JDK File : $JDK_FILE"
+    echo "   CHECKSUM : $JDK_FILE_CHECKSUM"
+    echo " Target JDK : $JDK_NAME"
+    echo "====================================================================="
+    
 }
 
 function callWget()
@@ -115,11 +128,24 @@ function checkMD5SUM_Win()
 
 function downlaodJDK()
 {
-    echo "Download JDK" 
-    echo "Download JDK8"
-    # echo checkMD5SUM_$OS $JDK_FILE_CHECKSUM
-    if [[ "$FORCE_DOWNLOAD" == true ]] || [[ ! -e $DOWNLOAD_DIR/$JDK_FILE ]] || [[ ! "$(checkMD5SUM_$OS)" == "$JDK_FILE_CHECKSUM" ]]; then
-        echo callWget
+    echo "Download $JDK_FILE..."
+    #echo $(checkMD5SUM_$OS) $JDK_FILE_CHECKSUM
+    local executeDownload=false
+    if [[ "$FORCE_DOWNLOAD" == true ]]; then
+        echo "Force Download is set, download starting..."
+        executeDownload=true
+    elif [[ ! -e $DOWNLOAD_DIR/$JDK_FILE ]]; then
+        echo "$DOWNLOAD_DIR/$JDK_FILE not found, download starting..."
+        executeDownload=true
+    elif [[ ! "$(checkMD5SUM_$OS)" == "$JDK_FILE_CHECKSUM" ]]; then
+        
+        echo "$DOWNLOAD_DIR/$JDK_FILE found, Checksum FAILED. re-download..."
+        executeDownload=true
+    else
+        echo "$DOWNLOAD_DIR/$JDK_FILE found, Checksum OK, download cancaled."
+    fi
+    if [[ $executeDownload == true ]]; then
+        callWget
     fi
 }
 
@@ -155,9 +181,6 @@ function setupJDKEnv_Linux()
     java -version
     
 }
-function setEnv(){
-    echo export JAVA_HOME=BAR
-}
 
 function setupJDKEnv_Mac()
 {
@@ -176,7 +199,7 @@ function main()
     preparePlatform
     downlaodJDK
     echo "Install $JDK_FILE ..."
-    installJDK_$OS
+    #installJDK_$OS
     echo "Setup $JDK_NAME ..."
     setupJDKEnv_$OS
 }
