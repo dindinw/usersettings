@@ -19,7 +19,9 @@ Documentation (http://curl.haxx.se/docs/manpage.html)
 
 Installation
 
-   * Windows : [curl.exe][d_curl_1] [libcrypto.dll][d_curl_2] [libssl.dll][d_curl_3] [curl-ca-bundle.crt][d_curl_4] [libcurl.dll][d_curl_5]
+   * Windows : [curl.exe][d_curl_1] [libcrypto.dll][d_curl_2] [libssl.dll][d_curl_3] [curl-ca-bundle.crt][d_curl_4] [libcurl.dll*][d_curl_5]
+
+     (* Note : libcurl.dll is not need for using command-line curl.)
 
    * Linux 
 
