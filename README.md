@@ -17,7 +17,11 @@ Offical Page (http://curl.haxx.se/)
 
 Documentation (http://curl.haxx.se/docs/manpage.html)
 
-   * Windows [curl.exe](https://github.com/dindinw/msysgit/raw/master/mingw/bin/curl.exe) [libcrypto.dll](https://github.com/dindinw/msysgit/raw/master/mingw/bin/libcrypto.dll)
+   * Windows 
+
+    * [curl.exe](https://github.com/dindinw/msysgit/raw/master/mingw/bin/curl.exe) 
+    * [libcrypto.dll](https://github.com/dindinw/msysgit/raw/master/mingw/bin/libcrypto.dll) 
+    * [libssl.dll](https://github.com/dindinw/msysgit/raw/master/mingw/bin/libssl.dll)
    
    * Linux 
 
