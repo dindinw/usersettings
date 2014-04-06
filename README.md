@@ -17,7 +17,10 @@ Offical Page (http://curl.haxx.se/)
 
 Documentation (http://curl.haxx.se/docs/manpage.html)
 
+Installation
+
    * Windows : [curl.exe][d_curl_1] [libcrypto.dll][d_curl_2] [libssl.dll][d_curl_3]
+
    * Linux 
 
         sudo apt-get install curl
@@ -28,10 +31,15 @@ Documentation (http://curl.haxx.se/docs/manpage.html)
 [d_curl_2]:https://github.com/dindinw/msysgit/raw/master/mingw/bin/libcrypto.dll
 [d_curl_3]:https://github.com/dindinw/msysgit/raw/master/mingw/bin/libssl.dll
 
+### Git
+
+* Windows : [install.bat][d_git_1]
+
+[d_git_1]:https://github.com/dindinw/usersettings/raw/master/git/install.bat
+
 ### Chorme
 
 Windows [Download][chorme_win]
-
 
 [chorme_win]:https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7B4CCCCB56-E8B8-F482-D457-3DF54C9B95C0%7D%26lang%3Den%26browser%3D3%26usagestats%3D0%26appname%3DGoogle%2520Chrome%26needsadmin%3Dtrue%26installdataindex%3Ddefaultbrowser/update2/installers/ChromeStandaloneSetup.exe
 
