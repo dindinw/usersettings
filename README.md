@@ -1,7 +1,36 @@
  The instructions of how to set up developer environment under various platform and a collection of useful developer environment setting script and files.
 
+
+
+
+
 Basic Build Env
 ===============
+
+
+Per-requirement
+---------------
+
+### Curl 
+
+Offical Page (http://curl.haxx.se/)
+
+Documentation (http://curl.haxx.se/docs/manpage.html)
+
+   * Windows [Download here](https://github.com/dindinw/msysgit/raw/master/mingw/bin/curl.exe)
+   
+   * Linux 
+
+        sudo apt-get install curl
+   
+   * Mac (shipped)
+
+### Chorme
+
+Windows [Download][chorme_win]
+
+
+[chorme_win]:https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7B4CCCCB56-E8B8-F482-D457-3DF54C9B95C0%7D%26lang%3Den%26browser%3D3%26usagestats%3D0%26appname%3DGoogle%2520Chrome%26needsadmin%3Dtrue%26installdataindex%3Ddefaultbrowser/update2/installers/ChromeStandaloneSetup.exe
 
 Linux
 -----
