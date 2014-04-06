@@ -17,17 +17,16 @@ Offical Page (http://curl.haxx.se/)
 
 Documentation (http://curl.haxx.se/docs/manpage.html)
 
-   * Windows 
-
-    * [curl.exe](https://github.com/dindinw/msysgit/raw/master/mingw/bin/curl.exe) 
-    * [libcrypto.dll](https://github.com/dindinw/msysgit/raw/master/mingw/bin/libcrypto.dll) 
-    * [libssl.dll](https://github.com/dindinw/msysgit/raw/master/mingw/bin/libssl.dll)
-   
+   * Windows : [curl.exe][d_curl_1] [libcrypto.dll][d_curl_2] [libssl.dll][d_curl_3]
    * Linux 
 
         sudo apt-get install curl
    
    * Mac (shipped)
+
+[d_curl_1]:https://github.com/dindinw/msysgit/raw/master/mingw/bin/curl.exe
+[d_curl_2]:https://github.com/dindinw/msysgit/raw/master/mingw/bin/libcrypto.dll
+[d_curl_3]:https://github.com/dindinw/msysgit/raw/master/mingw/bin/libssl.dll
 
 ### Chorme
 
