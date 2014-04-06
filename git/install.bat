@@ -23,7 +23,7 @@
 @echo link_msysgit_net  : %link_msysgit_net%
 @echo --------------------------------------------------------------------------
 
-@rm tmpFile
+@del tmpFile
 @for /f "tokens=8 delims=/" %%e in ( "%link_msysgit_net%" ) do @set msysgit_net_file=%%e
 @echo Download : %msysgit_net_file%
 @curl -s -L %link_msysgit_net% -O
