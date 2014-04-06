@@ -22,6 +22,7 @@ Installation
    * Windows : [curl.exe][d_curl_1] [libcrypto.dll][d_curl_2] [libssl.dll][d_curl_3] [curl-ca-bundle.crt][d_curl_4] [libcurl.dll*][d_curl_5]
 
      (* Note : libcurl.dll is not need for using command-line curl.)
+     ( Note2 : curl 7.30.0 (i386-pc-win32) libcurl/7.30.0 OpenSSL/0.9.8y zlib/1.2.7)
 
    * Linux 
 
