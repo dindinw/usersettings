@@ -13,6 +13,8 @@ var cheerio = require('cheerio');
 var echo = console.log;
 
 /* Consts*/
+var homedir = (process.platform === 'win32') ? process.env.HOMEPATH : process.env.HOME;
+echo (homedir)
 var BOOK_SAVE_PATH="C:\\Users\\yidwu\\Downloads\\_Un"
 var ISBN_REGXP=/\d{9}[\d|X]/
 var ASIN_REGXP=/[A-Z0-9]{10}/
@@ -103,8 +105,8 @@ function renameBookNames(err,files){
         
         var doBookName = function changeName(newName){
             echo(changeName.fileName,"->",newName+changeName.fileExt)
-            fs.renameSync(BOOK_SAVE_PATH+"\\"+changeName.fileName,
-                BOOK_SAVE_PATH+"\\"+newName+changeName.fileExt);
+            fs.renameSync(path.join(BOOK_SAVE_PATH,changeName.fileName),
+                path.join(BOOK_SAVE_PATH,newName+changeName.fileExt));
         }
         doBookName.fileName=fileName
         doBookName.fileExt=fileExt
