@@ -1,5 +1,5 @@
 @rem
-@call :amazonIsdn 111879429X
+@call :amazonIsdn 1626710104
 @call :amazonIsdn 0321942051
 @call :amazonIsdn 012408138X
 @goto:eof
