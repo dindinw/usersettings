@@ -176,5 +176,25 @@ function renameBookNames(err,files){
     }
 
 }
+/* first do some prepare work, need to do it in sync*/
+fs.readdirSync(BOOK_SAVE_PATH).forEach(function(file){
+    if (fs.statSync(path.join(BOOK_SAVE_PATH,file)).isDirectory()) return;
+    var fileExt=path.extname(file);
+    if (fileExt === ".rar") {
+        var exec = require('child_process').exec,child;
+        var fileBaseName=path.basename(file,fileExt);
+        var rarfile = path.join(BOOK_SAVE_PATH,file);
+        var _7zCmd = "7z x -o"+fileBaseName+" "+"-w"+path.join(BOOK_SAVE_PATH)+" "+file+" -y";
+        echo(_7zCmd);
+        child = exec(_7zCmd,
+          function (error, stdout, stderr) {
+            console.log('stdout: ' + stdout);
+            console.log('stderr: ' + stderr);
+            if (error !== null) {
+              console.log('exec error: ' + error);
+          }
+      });
+    }
+});
 
-fs.readdir(BOOK_SAVE_PATH,renameBookNames);
+//fs.readdir(BOOK_SAVE_PATH,renameBookNames);
