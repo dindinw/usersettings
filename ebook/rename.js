@@ -80,6 +80,7 @@ function requestByAmazon(changeNameJob,ASIN){
             var newName = [];
             var title = $('#btAsinTitle').children().get(0).prev.data.trim();
             title = title.replace(/:/g," -");
+            title = title.replace(/\//g,"&")
             var type  = $('#btAsinTitle').children().text().trim();
             var date
             var pubdate = $('#pubdate').val();
@@ -141,8 +142,12 @@ ChangeNameJob.prototype.changeName = function (newName){
         echo("WARNING:","File exists!","->",newName+this.fileExt);
 
     }
-    fs.renameSync(path.join(BOOK_SAVE_PATH,this.fileName),
-        path.join(BOOK_SAVE_PATH,newName+this.fileExt));
+    fs.rename(
+        path.join(BOOK_SAVE_PATH,this.fileName),
+        path.join(BOOK_SAVE_PATH,newName+this.fileExt),
+        function (err) {
+            if (err) echo('rename callback ', err); 
+        });
 }
 
 function renameBookNames(err,files){
