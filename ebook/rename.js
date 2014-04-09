@@ -84,6 +84,8 @@ function requestByAmazon(changeNameJob,ASIN){
             if ($('#btAsinTitle').children().get(0)!==undefined){
                 title = $('#btAsinTitle').children().get(0).prev.data.trim();
                 type  = $('#btAsinTitle').children().text().trim();
+            }else if($('#productTitle').text()!==undefined){
+                title = $('#productTitle').text();
             }
             title = title.replace(/:/g," -");
             title = title.replace(/\//g,"&")
@@ -157,120 +159,14 @@ ChangeNameJob.prototype.changeName = function (newName){
         });
 }
 
-/*
-function renameBookNames(err,files){
-    for (var i = 0; i<files.length ; i++){
-        if (fs.statSync(path.join(BOOK_SAVE_PATH,files[i])).isDirectory())
-            continue; //not handle subdirectory.
-        var fileName=files[i];
-        var fileExt=path.extname(fileName);
-        var fileBaseName=path.basename(fileName,fileExt);
-        var isbn
-        
-        if (fileExt===".rar"){
-            uncompressFile(fileName);
-
-        }else{
-            if (ISBN10_REGXP.test(fileBaseName)) {         //Goolge for ISDN
-                isbn=ISBN10_REGXP.exec(fileBaseName)[0]
-            } else if (ASIN_REGXP.test(fileBaseName)) {  //Amzon for ASIN
-                isbn=ASIN_REGXP.exec(fileBaseName)[0]
-            }
-            else{
-                echo("WARNING :","Can't parse a isdn or asin from given name : [",fileName,"]");
-                continue;
-            }
-        }
-        var job = new ChangeNameJob(fileName,fileExt);
-        requestByAmazon(job,isbn);
-    }
-}
-*/
-/*first do some prepare work, need to do it in sync*/
-/*
-fs.readdirSync(BOOK_SAVE_PATH).forEach(function(file){
-    if (fs.statSync(path.join(BOOK_SAVE_PATH,file)).isDirectory()) return;
-    var fileExt=path.extname(file);
-    if (fileExt === ".rar") {
-        var isbn
-        if (ISBN10_REGXP.test(file)){
-            isbn = ISBN10_REGXP.exec(file)[0];
-        }
-        else if (ISBN13_REGXP.test(file)){
-            isbn = ISBN13_REGXP.exec(file)[0];
-        }
-        else if (ASIN_REGXP.test(file)){
-            isbn = ASIN_REGXP.exec(file)[0];
-        }else{
-            echo("WARNING:",file,"is not in a valid name pattern. further oper canceled!");
-            return;
-        }
-        var outputDir=path.join(BOOK_SAVE_PATH,isbn);
-        var rarfilePath = path.join(BOOK_SAVE_PATH,file);
-        var _7zCmd = "7z x -o"+outputDir+" "+rarfilePath+" -y";
-        echo(_7zCmd);
-        child_process.exec(_7zCmd, function (error, stdout, stderr) {
-            if (stdout !== null && stdout !== "") {
-                echo('stdout: ',stdout);  
-            }
-            if (error !== null) {
-                echo("Execute:",_7zCmd,"Failed!");
-                console.error( error.stack );
-            }else{
-                echo("Execute:",_7zCmd,"Done!");
-            }
-        });
-
-    }
-});
-*/
-
-function uncompressFiles(err,files){
-    files.forEach( function(file){
-        if (fs.statSync(path.join(BOOK_SAVE_PATH,file)).isDirectory()) return;
-        var fileExt=path.extname(file);
-        if (fileExt === ".rar") {
-            var isbn
-            if (ISBN10_REGXP.test(file)){
-                isbn = ISBN10_REGXP.exec(file)[0];
-            }
-            else if (ISBN13_REGXP.test(file)){
-                isbn = ISBN13_REGXP.exec(file)[0];
-            }
-            else if (ASIN_REGXP.test(file)){
-                isbn = ASIN_REGXP.exec(file)[0];
-            }else{
-                echo("WARNING:",file,"is not in a valid name pattern. further oper canceled!");
-                return;
-            }
-            var outputDir=path.join(BOOK_SAVE_PATH,isbn);
-            var rarfilePath = path.join(BOOK_SAVE_PATH,file);
-            var _7zCmd = "7z x -o"+outputDir+" "+rarfilePath+" -y";
-            //echo(_7zCmd);
-            child_process.exec(_7zCmd, function (error, stdout, stderr) {
-                if (stdout !== null && stdout !== "") {
-                    echo('stdout: ',stdout);  
-                }
-                if (error !== null) {
-                    echo("Execute:",_7zCmd,"Failed!");
-                    console.error( error.stack );
-                }else{
-                    echo("Execute:",_7zCmd,"Done!");
-                }
-            });
-        }
-    });
-}
-
-
 function parseISBN(name){
-    echo("parseISBN",name)
+    //echo("parseISBN",name)
     var isbn
-    if (ISBN10_REGXP.test(name)) {    
-        isbn=ISBN10_REGXP.exec(name)[0];
+    if (ISBN13_REGXP.test(name)) {    
+        isbn=ISBN13_REGXP.exec(name)[0];
     }
-    else if (ISBN13_REGXP.test(name)){
-        isbn = ISBN13_REGXP.exec(name)[0];
+    else if (ISBN10_REGXP.test(name)){
+        isbn = ISBN10_REGXP.exec(name)[0];
     }
     else if (ASIN_REGXP.test(name)) { 
         isbn=ASIN_REGXP.exec(name)[0];
@@ -279,7 +175,7 @@ function parseISBN(name){
 }
 
 function renameBook(parentDir,file){
-    echo("enter",parentDir,file);
+    //echo("enter",parentDir,file);
     if (!fs.statSync(path.join(parentDir,file)).isDirectory()){
         var fileName=file;
         var fileExt=path.extname(fileName);
@@ -309,6 +205,7 @@ function renameBook(parentDir,file){
             echo("WARNING :","Can't parse a isdn or asin from given name : [",fileName,"]");
             return;
         }
+        echo(isbn)
         fs.readdir(path.join(parentDir,isbn),
                 function(err,unzipfiles){
                     unzipfiles.forEach(function(unzipfile){
@@ -334,6 +231,9 @@ function uncompressRarFile(rarfile,isbn){
                     console.error( error.stack );
                 }else{
                     echo("Execute:",_7zCmd,"Done!");
+                    echo("Removed the rar file.")
+                    fs.unlinkSync(rarfilePath);
+                    waitFor.count();  
                 }
         });
     }
@@ -342,29 +242,35 @@ function uncompressRarFile(rarfile,isbn){
 var numberOfRarFiles=0;
 fs.readdirSync(BOOK_SAVE_PATH).forEach(function(file){
     if (path.extname(file)===".rar"){
-        numberOfRarFiles++;
-}});
+        var isbn = parseISBN(file);
+        if (isbn !== undefined){
+            numberOfRarFiles++;
+        }
+    }
+});
 
 function WaitForFinished(number){
     this.counter = number;
 }
 
 WaitForFinished.prototype.count = function () {
-    this.counter --;
+    if (this.counter !==0) this.counter --;
     if (this.counter == 0) {
+        echo("------------------------------------------------------------------Starting renaming...")
         fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){renameBook(BOOK_SAVE_PATH,file)})})
     }
 }
+//echo(numberOfRarFiles)
 
 var waitFor = new WaitForFinished(numberOfRarFiles);
+if (numberOfRarFiles === 0) waitFor.count();
 
 fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){
     if (path.extname(file)===".rar"){
         var isbn = parseISBN(file);
         if (isbn !== undefined){
-            uncompressRarFile(file,isbn);    
+            uncompressRarFile(file,isbn);
         }
-        waitFor.count();
     }
 })});
 
