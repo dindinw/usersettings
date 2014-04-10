@@ -114,8 +114,9 @@ function requestByAmazon(changeNameJob,ASIN){
             }
             if (pubdate !== undefined) {
                 date = new Date(pubdate);
-                date = (date.getMonth()<10) ? date.getFullYear()+"-0"+date.getMonth()
-                                            : date.getFullYear()+"-"+date.getMonth();
+                //Notice, getMonth return 0 to 11
+                date = (date.getMonth()<10) ? date.getFullYear()+"-0"+(date.getMonth()+1)
+                                            : date.getFullYear()+"-"+(date.getMonth()+1);
             }
             
             newName.push(title);
