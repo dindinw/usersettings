@@ -21,11 +21,11 @@ var homedir = (process.platform === 'win32') ? process.env.USERPROFILE : process
 //var BOOK_SAVE_PATH="C:\\Users\\yidwu\\Downloads\\_Un"
 var BOOK_SAVE_PATH=path.join(homedir,"Downloads","_Un"); //cross-platform path
 /* Regxp */
-var DATE_REGXP=/(January|February|March|April|May|June|July|August|September|October|November|December).*/
-var ISBN10_REGXP=/^\d{9}[\d|X]/
-var ISBN13_REGXP=/^(978|979)(?:-|)\d{9}[\d|X]/
-var EDTION_REGXP=/^\d{1}$/
-var ASIN_REGXP=/^[A-Z0-9]{10}/
+var DATE_REGXP="(January|February|March|April|May|June|July|August|September|October|November|December).*"
+var ISBN10_REGXP="\d{9}[\d|X]"
+var ISBN13_REGXP="(978|979)(?:-|)\d{9}[\d|X]"
+var EDTION_REGXP="\d{1}"
+var ASIN_REGXP="[A-Z0-9]{10}"
 
 function requestByGoogleBook(changeNameJob,isbn){
     var reqBody = {
@@ -101,15 +101,15 @@ function requestByAmazon(changeNameJob,ASIN){
                     //echo("----------------")
                     var text = $(this).text().trim();
                     //echo(text);
-                    if (DATE_REGXP.test(text)){
+                    if (new RegExp(DATE_REGXP).test(text)){
                         echo("Pub Date :",text);
                         pubdate = Date.parse(text);
-                    }else if (ISBN13_REGXP.test(text)){
+                    }else if (new RegExp(ISBN13_REGXP).test(text)){
                         echo("ISDN_13  :",text);
                     }
-                    else if(ISBN10_REGXP.test(text)){
+                    else if(new RegExp(ISBN10_REGXP).test(text)){
                         echo("ISDN_10  :",text);
-                    }else if(EDTION_REGXP.test(text)){
+                    }else if(new RegExp('^'+EDTION_REGXP+'$').test(text)){
                         echo("Edtion   :",text);
                     }
                     
@@ -160,6 +160,7 @@ ChangeNameJob.prototype.changeName = function (newName){
     }
     if(this.pubdate !== undefined){
         echo("Change file date to","->",new Date(this.pubdate).toDateString());
+        this.pubdate = this.pubdate instanceof Date ? this.pubdate : new Date(this.pubdate);
         fs.utimesSync(path.join(this.parentDir,this.fileName), this.pubdate/1000, this.pubdate/1000);
     }
     if(this.fileExt === ".zip"){ // code
@@ -175,17 +176,23 @@ ChangeNameJob.prototype.changeName = function (newName){
     
 }
 
-function parseISBN(name){
+function parseISBN(name,matchFromStart){
     //echo("parseISBN",name)
     var isbn
-    if (ISBN13_REGXP.test(name)) {    
-        isbn=ISBN13_REGXP.exec(name)[0];
+    if (matchFromStart === undefined) matchFromStart = true;
+    //echo("matchFromStart=",matchFromStart)
+    var isbn13 = matchFromStart ? new RegExp('^'+ISBN13_REGXP) : new RegExp(ISBN13_REGXP)  ;
+    var isbn10 = matchFromStart ? new RegExp('^'+ISBN10_REGXP) : new RegExp(ISBN10_REGXP) ;
+    var asin = matchFromStart ? new RegExp('^'+ASIN_REGXP) : new RegExp(ASIN_REGXP);
+
+    if (isbn13.test(name)) {    
+        isbn = isbn13.exec(name)[0];
     }
-    else if (ISBN10_REGXP.test(name)){
-        isbn = ISBN10_REGXP.exec(name)[0];
+    else if (isbn10.test(name)){
+        isbn = isbn10.exec(name)[0];
     }
-    else if (ASIN_REGXP.test(name)) { 
-        isbn=ASIN_REGXP.exec(name)[0];
+    else if (asin.test(name)) { 
+        isbn=asin.exec(name)[0];
     }
     return isbn;
 }
@@ -295,17 +302,36 @@ function doRealRename() {
 
 }
 
+function doClean() {
+    //echo("do clean...")
+    fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){
+        var isbn = parseISBN(file,false);
+        if (isbn === undefined){
+            echo("WARNING :","Can't parse a isdn or asin from given file : [",file,"]");
+        }
+        var baseName=path.basename(file,path.extname(file));
+        if (isbn !== undefined && baseName != isbn){
+            //echo(file,"->",isbn);
+            var job = new ChangeNameJob(BOOK_SAVE_PATH,file,path.extname(file));
+            job.changeName(isbn);
+        }
+    })});
+}
+
+
 function main() {
     
     var argv = require('minimist')(process.argv.slice(2),{
-        boolean:['h','v'],
-        string:'o',
-        alias: { v: 'version', h: 'help' },
-        default: { o : 'rename' }
+        string:['d'],
+        alias: { v: 'version', h: 'help', d: 'directory' },
     });;
-
+    if (argv._.length == 0 && Object.keys(argv).length == 1){ //without any opts
+        return doRealRename(); //do rename by default
+    }
     Object.keys(argv).forEach(function(entry) {
-        if ((entry == '_') || (entry == 'h') || (entry === 'help') || entry === 'version' || entry === 'v' || entry === 'o'){
+        if (entry === '_' || entry === 'h' || entry === 'help' 
+            || entry === 'version' || entry === 'v'|| entry === 'o' 
+            || entry === 'd' || entry === 'directory' ){
             //echo("testing input",entry,"passed!");
         }else{
             //echo("testing input",entry,"faied!");
@@ -313,14 +339,26 @@ function main() {
             printusage();
             process.exit(0);
         }
-
     });
 
     if (argv._.length > 1) {
         errArgument();
         return printusage();
     }
-    else if (argv._[0]){
+    if (argv.v) return printVersion();
+    if (argv.h) return printusage();
+    if (argv.d){
+        try{
+            var rootDir = path.join(argv.d);
+            fs.readdirSync(rootDir);
+            BOOK_SAVE_PATH=rootDir;
+        }catch(e){
+            errArgument();
+            echo(e.message.split(",")[1]);
+            process.exit(0);
+        }
+    }
+    if (argv._[0]){
         if (argv._[0] === 'clean') return doClean();
         if (argv._[0] === 'rename') return doRealRename();
         if (argv._[0] === 'help') return printusage();
@@ -328,31 +366,21 @@ function main() {
         errArgument();
         return printusage();
     }else {
-        if (argv.v) return printVersion();
-        if (argv.h) return printusage();
-        if (argv.o === 'rename') {
-            return doRealRename();
-        }else if (argv.o === 'clean') {
-            return doClean();
-        }else {
-            errArgument();
-        }
+        errArgument();
     }
 }
 
 function printusage() {
-    echo("Usage:","node",path.basename(process.argv[1]),"clean(-o clean)","|",
-        "rename (-o rename)","|","version (-v|--version)","|","help (-h|--help)");
+    echo("Uasge:","node",path.basename(process.argv[1]),"[rename] [-d|--drectory]");
+    echo("      ","node",path.basename(process.argv[1]),"clean [-d|--directory]");
+    echo("      ","node",path.basename(process.argv[1]),"version (-v|--version)");
+    echo("      ","node",path.basename(process.argv[1]),"help (-h|--help)");
 }
 function printVersion() {
-    echo("Version:","0.0.1");
+    echo(path.basename(process.argv[1]),"Version:","0.0.1");
 }
 function errArgument(){
-    echo("Error Unkowned Aguramnt:",process.argv.slice(2))
-}
-
-function doClean() {
-    echo("do clean...")
+    echo("Error or Unknown Argument:",process.argv.slice(2))
 }
 
 main();
