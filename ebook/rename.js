@@ -296,7 +296,63 @@ function doRealRename() {
 }
 
 function main() {
-    doRealRename();
+    
+    var argv = require('minimist')(process.argv.slice(2),{
+        boolean:['h','v'],
+        string:'o',
+        alias: { v: 'version', h: 'help' },
+        default: { o : 'rename' }
+    });;
+
+    Object.keys(argv).forEach(function(entry) {
+        if ((entry == '_') || (entry == 'h') || (entry === 'help') || entry === 'version' || entry === 'v' || entry === 'o'){
+            //echo("testing input",entry,"passed!");
+        }else{
+            //echo("testing input",entry,"faied!");
+            errArgument();
+            printusage();
+            process.exit(0);
+        }
+
+    });
+
+    if (argv._.length > 1) {
+        errArgument();
+        return printusage();
+    }
+    else if (argv._[0]){
+        if (argv._[0] === 'clean') return doClean();
+        if (argv._[0] === 'rename') return doRealRename();
+        if (argv._[0] === 'help') return printusage();
+        if (argv._[0] === 'version') return printVersion();
+        errArgument();
+        return printusage();
+    }else {
+        if (argv.v) return printVersion();
+        if (argv.h) return printusage();
+        if (argv.o === 'rename') {
+            return doRealRename();
+        }else if (argv.o === 'clean') {
+            return doClean();
+        }else {
+            errArgument();
+        }
+    }
+}
+
+function printusage() {
+    echo("Usage:","node",path.basename(process.argv[1]),"clean(-o clean)","|",
+        "rename (-o rename)","|","version (-v|--version)","|","help (-h|--help)");
+}
+function printVersion() {
+    echo("Version:","0.0.1");
+}
+function errArgument(){
+    echo("Error Unkowned Aguramnt:",process.argv.slice(2))
+}
+
+function doClean() {
+    echo("do clean...")
 }
 
 main();
