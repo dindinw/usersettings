@@ -57,6 +57,9 @@ function requestByGoogleBook(changeNameJob,isbn){
             echo("Pub Date :",date);
             echo("New Name :",newName)
 
+            if (date !== undefined) {
+                changeNameJob.pubdate = new Date(Date.parse(date));
+            }
             changeNameJob.changeName(newName);
         }else{
             echo('error :',rep.statusCode);
@@ -115,8 +118,9 @@ function requestByAmazon(changeNameJob,ASIN){
             if (pubdate !== undefined) {
                 date = new Date(pubdate);
                 //Notice, getMonth return 0 to 11
-                date = (date.getMonth()<10) ? date.getFullYear()+"-0"+(date.getMonth()+1)
-                                            : date.getFullYear()+"-"+(date.getMonth()+1);
+                var month= date.getMonth()+1
+                date = (month<10) ? date.getFullYear()+"-0"+month
+                                            : date.getFullYear()+"-"+month;
             }
             
             newName.push(title);
@@ -128,6 +132,9 @@ function requestByAmazon(changeNameJob,ASIN){
             echo("Title    :",title);
             echo("New Name :",newName)
 
+            if (pubdate !== undefined) {
+                changeNameJob.pubdate = pubdate
+            }
             changeNameJob.changeName(newName);
         }else{
             echo("------------------------------------------------------------")
@@ -146,18 +153,26 @@ function ChangeNameJob(parentDir,orginalFileName,fileExt){
 }
 ChangeNameJob.prototype.changeName = function (newName){
     //check existed
-    echo(this.fileName,"->",newName+this.fileExt);
     if (fs.existsSync(path.join(this.parentDir,newName+this.fileExt))) {
         newName = newName+"_"+Date.now();;
         echo("WARNING:","File exists!","->",newName+this.fileExt);
 
     }
+    if(this.pubdate !== undefined){
+        echo("Change file date to","->",new Date(this.pubdate).toDateString());
+        fs.utimesSync(path.join(this.parentDir,this.fileName), this.pubdate/1000, this.pubdate/1000);
+    }
+    if(this.fileExt === ".zip"){ // code
+        newName = newName+"[Source_Code]"
+    }
+    echo("Change file name ",this.fileName,"->",newName+this.fileExt);
     fs.rename(
         path.join(this.parentDir,this.fileName),
         path.join(this.parentDir,newName+this.fileExt),
         function (err) {
             if (err) echo('rename callback ', err); 
         });
+    
 }
 
 function parseISBN(name){
@@ -194,23 +209,23 @@ function renameBook(parentDir,file){
             //uncompressRarFile(fileName,isbn);
             
         }else{
-            echo("ChangeNameJob",parentDir,fileName,fileExt);
+            echo("ChangeNameJob [","dir:'",parentDir,"'; file:'",fileName,"'; file-ext:'",fileExt,"'']");
             var job = new ChangeNameJob(parentDir,fileName,fileExt);
             requestByAmazon(job,isbn);
         }
 
     }else{
-        echo("folder",file);
+        //echo("folder",file);
         var isbn = parseISBN(file);
         if (isbn === undefined){
             echo("WARNING :","Can't parse a isdn or asin from given name : [",fileName,"]");
             return;
         }
-        echo(isbn)
+        //echo("isbn",isbn)
         fs.readdir(path.join(parentDir,isbn),
                 function(err,unzipfiles){
                     unzipfiles.forEach(function(unzipfile){
-                        echo("unzipfile",unzipfile);
+                        //echo("In isbn folder file",unzipfile);
                         renameBook(path.join(parentDir,isbn),unzipfile)})});
     }
 }
@@ -240,16 +255,6 @@ function uncompressRarFile(rarfile,isbn){
     }
 }
 
-var numberOfRarFiles=0;
-fs.readdirSync(BOOK_SAVE_PATH).forEach(function(file){
-    if (path.extname(file)===".rar"){
-        var isbn = parseISBN(file);
-        if (isbn !== undefined){
-            numberOfRarFiles++;
-        }
-    }
-});
-
 function WaitForFinished(number){
     this.counter = number;
 }
@@ -261,17 +266,37 @@ WaitForFinished.prototype.count = function () {
         fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){renameBook(BOOK_SAVE_PATH,file)})})
     }
 }
-//echo(numberOfRarFiles)
 
-var waitFor = new WaitForFinished(numberOfRarFiles);
-if (numberOfRarFiles === 0) waitFor.count();
 
-fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){
-    if (path.extname(file)===".rar"){
-        var isbn = parseISBN(file);
-        if (isbn !== undefined){
-            uncompressRarFile(file,isbn);
+function doRealRename() {
+
+    var numberOfRarFiles=0;
+    fs.readdirSync(BOOK_SAVE_PATH).forEach(function(file){
+        if (path.extname(file)===".rar"){
+            var isbn = parseISBN(file);
+            if (isbn !== undefined){
+                numberOfRarFiles++;
+            }
         }
-    }
-})});
+    });
+    //echo(numberOfRarFiles)
+    
+    var waitFor = new WaitForFinished(numberOfRarFiles);
+    if (numberOfRarFiles === 0) waitFor.count();
 
+    fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){
+        if (path.extname(file)===".rar"){
+            var isbn = parseISBN(file);
+            if (isbn !== undefined){
+                uncompressRarFile(file,isbn);
+            }
+        }
+    })});
+
+}
+
+function main() {
+    doRealRename();
+}
+
+main();
