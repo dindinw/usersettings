@@ -13,19 +13,24 @@ var path = require('path');
 var cheerio = require('cheerio');
 var child_process = require('child_process');
 var echo = console.log;
-
+var os = require('os');
 
 /* Consts*/
 var homedir = (process.platform === 'win32') ? process.env.USERPROFILE : process.env.HOME;
 //echo (homedir)
 //var BOOK_SAVE_PATH="C:\\Users\\yidwu\\Downloads\\_Un"
 var BOOK_SAVE_PATH=path.join(homedir,"Downloads","_Un"); //cross-platform path
+var RENAME_ANSWER_FILE = 'rename-answerfile.txt';
 /* Regxp */
-var DATE_REGXP="(January|February|March|April|May|June|July|August|September|October|November|December).*"
+var MONTH_REGXP="(January|February|March|April|May|June|July|August|September|October|November|December).*"
+var MONTH_ABBREV_REGXP="(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 var ISBN10_REGXP="\d{9}[\d|X]"
 var ISBN13_REGXP="(978|979)(?:-|)\d{9}[\d|X]"
 var EDTION_REGXP="\d{1}"
 var ASIN_REGXP="[A-Z0-9]{10}"
+
+
+
 
 function requestByGoogleBook(changeNameJob,isbn){
     var reqBody = {
@@ -101,7 +106,7 @@ function requestByAmazon(changeNameJob,ASIN){
                     //echo("----------------")
                     var text = $(this).text().trim();
                     //echo(text);
-                    if (new RegExp(DATE_REGXP).test(text)){
+                    if (new RegExp(MONTH_REGXP).test(text)){
                         echo("Pub Date :",text);
                         pubdate = Date.parse(text);
                     }else if (new RegExp(ISBN13_REGXP).test(text)){
@@ -175,6 +180,15 @@ ChangeNameJob.prototype.changeName = function (newName){
         });
     
 }
+ChangeNameJob.prototype.writeFile = function (keywords,isbn,bookname){
+    
+    echo("Save search result :",this.fileName,"|",isbn,"|",bookname);
+    fs.appendFile(path.join(BOOK_SAVE_PATH,RENAME_ANSWER_FILE), os.EOL+this.fileName
+        +" | "+keywords
+        +" | "+isbn+" | "+bookname+os.EOL, function (err) {
+        if (err != null) echo(err);
+    });
+}
 
 function parseISBN(name,matchFromStart){
     //echo("parseISBN",name)
@@ -194,7 +208,66 @@ function parseISBN(name,matchFromStart){
     else if (asin.test(name)) { 
         isbn=asin.exec(name)[0];
     }
+    if (isbn === undefined){
+        echo("WARNING :","Can't parse a isdn or asin from '",name,"'");
+    }
     return isbn;
+}
+
+function searchISBN(name,callback){
+    var searchname = path.basename(name,path.extname(name));
+    searchname = searchname.replace(/[:._\/\(\),]/g," ");
+    echo(searchname);
+    searchname = searchname.replace(/eBook-DDU/g,"");
+    searchname = searchname.replace(/(19|20)\d{2}/g,"")
+    echo(searchname);
+    searchname = searchname.replace(new RegExp(MONTH_ABBREV_REGXP+'(\\s\\d{1,2}|)',"g"),""); //month
+    echo(searchname);
+    searchname = searchname.replace(/(^\s+|\s+$)/g,"") //trim
+    echo(searchname);
+    searchname = searchname.replace(/\s{2,}/g," ") //extra whitesapces
+    echo(searchname);
+
+    searchname = searchname.replace(/\s\w+\sEdition\s\w+/g,"");
+    echo(searchname);
+
+    searchname = searchname.replace(/[\s+]/g,'+');
+    echo(searchname);
+    echo("Keywords:",searchname);
+    var isbn
+    var reqBody = {
+        method:'GET',
+        uri:"http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="+searchname
+    };
+    request(reqBody,function(err,rep,body){
+        if(rep.statusCode == 200){
+            echo('-----------------------------------------------------------');
+            echo(reqBody.uri);
+            var $ = cheerio.load(body);
+            var isbnStr = $('div[id=result_0]').attr('name');
+            var bookname = $('div[id=result_0]').find('span').first().text();
+            echo("The result 0 isbn :",isbnStr);
+            echo("The result 0 name :",bookname);
+            isbn = parseISBN(isbnStr,true);
+            //echo("After parse test:",isbn);
+
+            if (isbn === undefined){
+                echo("WARNING :","Fail to find a isdn or asin by '",name,"'");
+            }else{
+                var noresult = $('h1[id=noResultsTitle]').text();
+                if (noresult) {
+                    echo(noresult);
+                }
+                callback(searchname,isbn,bookname);
+            }
+        }
+        else{
+            echo('error :',rep.statusCode);
+            echo(body);
+
+        }
+    });
+
 }
 
 function renameBook(parentDir,file){
@@ -275,7 +348,7 @@ WaitForFinished.prototype.count = function () {
 }
 
 
-function doRealRename() {
+function doDefaultRename() {
 
     var numberOfRarFiles=0;
     fs.readdirSync(BOOK_SAVE_PATH).forEach(function(file){
@@ -302,36 +375,56 @@ function doRealRename() {
 
 }
 
-function doClean() {
+function doClean(search) {
     //echo("do clean...")
-    fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){
-        var isbn = parseISBN(file,false);
-        if (isbn === undefined){
-            echo("WARNING :","Can't parse a isdn or asin from given file : [",file,"]");
+    if (search){ //clean answer file frist before do search.
+        var answerfile = path.join(BOOK_SAVE_PATH,RENAME_ANSWER_FILE);
+        if (fs.existsSync(answerfile)) {
+            fs.writeFileSync(answerfile, "");
         }
+    }
+    fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){
+        if (file == RENAME_ANSWER_FILE) return; //don't handle the answer file
+        var isbn = parseISBN(file,false);
         var baseName=path.basename(file,path.extname(file));
         if (isbn !== undefined && baseName != isbn){
             //echo(file,"->",isbn);
             var job = new ChangeNameJob(BOOK_SAVE_PATH,file,path.extname(file));
             job.changeName(isbn);
         }
+        if (isbn === undefined){
+            if(search){
+                echo("Try to search the name keyword to get isdn")
+                searchISBN(file,function(keywords,isbn,bookname){
+                    var job = new ChangeNameJob(BOOK_SAVE_PATH,file,path.extname(file));
+                    job.writeFile(keywords,isbn,bookname);
+                });
+            }
+        }
+        
     })});
 }
 
+function renameByAnswerfile(answerfile){
+    echo(answerfile);
+}
 
 function main() {
     
     var argv = require('minimist')(process.argv.slice(2),{
         string:['d'],
-        alias: { v: 'version', h: 'help', d: 'directory' },
+        alias: { v: 'version', h: 'help', d: 'directory', s:'search' }, 
     });;
+
     if (argv._.length == 0 && Object.keys(argv).length == 1){ //without any opts
         return doRealRename(); //do rename by default
     }
     Object.keys(argv).forEach(function(entry) {
         if (entry === '_' || entry === 'h' || entry === 'help' 
-            || entry === 'version' || entry === 'v'|| entry === 'o' 
-            || entry === 'd' || entry === 'directory' ){
+            || entry === 'v' || entry === 'version'
+            || entry === 's' || entry === 'search'
+            || entry === 'd' || entry === 'directory'
+            || entry === 'answerfile' || entry === 'withanswerfile' ){
             //echo("testing input",entry,"passed!");
         }else{
             //echo("testing input",entry,"faied!");
@@ -359,8 +452,27 @@ function main() {
         }
     }
     if (argv._[0]){
-        if (argv._[0] === 'clean') return doClean();
-        if (argv._[0] === 'rename') return doRealRename();
+        if (argv._[0] === 'clean') {
+            return doClean(argv.s);
+        }
+        if (argv._[0] === 'rename') {
+            if (argv.answerfile) {
+                if (!(argv.answerfile instanceof Boolean)){
+                    var answerfile = path.join(argv.answerfile);
+                    if (fs.existsSync(answerfile)) return renameByAnswerfile(answerfile);
+                    answerfile = path.join(BOOK_SAVE_PATH,argv.answerfile);
+                    if (fs.existsSync(answerfile)) return renameByAnswerfile(answerfile);
+                    echo("Error:",answerfile,"not found!");
+                }
+                errArgument();
+                process.exit(0);
+                
+            }
+            if (argv.withanswerfile){
+                return renameByAnswerfile(path.join(BOOK_SAVE_PATH,RENAME_ANSWER_FILE)); 
+            }
+            return doDefaultRename();
+        }
         if (argv._[0] === 'help') return printusage();
         if (argv._[0] === 'version') return printVersion();
         errArgument();
@@ -372,7 +484,7 @@ function main() {
 
 function printusage() {
     echo("Uasge:","node",path.basename(process.argv[1]),"[rename] [-d|--drectory]");
-    echo("      ","node",path.basename(process.argv[1]),"clean [-d|--directory]");
+    echo("      ","node",path.basename(process.argv[1]),"clean [-d|--directory] [-s|--search]");
     echo("      ","node",path.basename(process.argv[1]),"version (-v|--version)");
     echo("      ","node",path.basename(process.argv[1]),"help (-h|--help)");
 }
