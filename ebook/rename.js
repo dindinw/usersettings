@@ -20,7 +20,9 @@ var homedir = (process.platform === 'win32') ? process.env.USERPROFILE : process
 //echo (homedir)
 //var BOOK_SAVE_PATH="C:\\Users\\yidwu\\Downloads\\_Un"
 var BOOK_SAVE_PATH=path.join(homedir,"Downloads","_Un"); //cross-platform path
-var RENAME_ANSWER_FILE = 'rename-answerfile.txt';
+var RENAME_ANSWER_DEFAULT_NAME = 'rename-answerfile.txt';
+var RENAME_ANSWER_DEFAULT_BASENAME = path.basename(RENAME_ANSWER_DEFAULT_NAME,path.extname(RENAME_ANSWER_DEFAULT_NAME));
+var RENAME_ANSWER_FILE = path.join(BOOK_SAVE_PATH,RENAME_ANSWER_DEFAULT_NAME);
 /* Regxp */
 var MONTH_REGXP="(January|February|March|April|May|June|July|August|September|October|November|December).*"
 var MONTH_ABBREV_REGXP="(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
@@ -180,12 +182,17 @@ ChangeNameJob.prototype.changeName = function (newName){
         });
     
 }
-ChangeNameJob.prototype.writeFile = function (keywords,isbn,bookname){
-    
-    echo("Save search result :",this.fileName,"|",isbn,"|",bookname);
-    fs.appendFile(path.join(BOOK_SAVE_PATH,RENAME_ANSWER_FILE), os.EOL+this.fileName
+ChangeNameJob.prototype.writeFile = function (keywords,isbn,bookname,pubdate){
+
+    var date = new Date(Date.parse(pubdate));
+    var month= date.getMonth()+1
+    date = (month<10) ? date.getFullYear()+"-0"+month:date.getFullYear()+"-"+month;
+    var newname = bookname +", "+date+", "+isbn;
+
+    echo("Save search result :",this.fileName,"|",isbn,"|",newname,"|",pubdate);
+    fs.appendFile(path.join(RENAME_ANSWER_FILE), os.EOL+this.fileName
         +" | "+keywords
-        +" | "+isbn+" | "+bookname+os.EOL, function (err) {
+        +" | "+isbn+" | "+newname+ " | "+pubdate+os.EOL, function (err) {
         if (err != null) echo(err);
     });
 }
@@ -246,6 +253,15 @@ function searchISBN(name,callback){
             var $ = cheerio.load(body);
             var isbnStr = $('div[id=result_0]').attr('name');
             var bookname = $('div[id=result_0]').find('span').first().text();
+            var length = $('div[id=result_0]').find('span').length
+
+            var authorAndDate = $('div[id=result_0]').find('span').eq(1).text();
+            echo (authorAndDate);
+            var date = new RegExp(MONTH_ABBREV_REGXP+'\\s+'+'\\d{1,2}'+','+'\\s+'+'\\d{4}').exec(authorAndDate)[0];
+            //echo (date);
+            //echo (Date.parse(date));
+            //var pubdate = new Date(Date.parse(date));
+            //echo(pubdate);
             echo("The result 0 isbn :",isbnStr);
             echo("The result 0 name :",bookname);
             isbn = parseISBN(isbnStr,true);
@@ -258,7 +274,7 @@ function searchISBN(name,callback){
                 if (noresult) {
                     echo(noresult);
                 }
-                callback(searchname,isbn,bookname);
+                callback(searchname,isbn,bookname,date);
             }
         }
         else{
@@ -378,13 +394,21 @@ function doDefaultRename() {
 function doClean(search) {
     //echo("do clean...")
     if (search){ //clean answer file frist before do search.
-        var answerfile = path.join(BOOK_SAVE_PATH,RENAME_ANSWER_FILE);
+        var answerfile = path.join(RENAME_ANSWER_FILE);
         if (fs.existsSync(answerfile)) {
-            fs.writeFileSync(answerfile, "");
+            var ext = path.extname(RENAME_ANSWER_FILE);
+            var basename = path.basename(RENAME_ANSWER_FILE,ext);
+            RENAME_ANSWER_FILE = path.join(BOOK_SAVE_PATH,basename+"_"+Date.now()+ext);
         }
+        echo("ANSWERFILE:",RENAME_ANSWER_FILE);
     }
-    fs.readdir(BOOK_SAVE_PATH,function(err,files){files.forEach(function(file){
-        if (file == RENAME_ANSWER_FILE) return; //don't handle the answer file
+    fs.readdir(BOOK_SAVE_PATH,function(err,files){files.filter(function(file){
+        //echo(file,RENAME_ANSWER_DEFAULT_BASENAME);
+        if (file.indexOf(RENAME_ANSWER_DEFAULT_BASENAME) === 0 ) return false; //don't handle the answer file
+        if (file == path.basename(RENAME_ANSWER_FILE)) return false;
+        return true; 
+    }).forEach(function(file){
+            
         var isbn = parseISBN(file,false);
         var baseName=path.basename(file,path.extname(file));
         if (isbn !== undefined && baseName != isbn){
@@ -395,9 +419,9 @@ function doClean(search) {
         if (isbn === undefined){
             if(search){
                 echo("Try to search the name keyword to get isdn")
-                searchISBN(file,function(keywords,isbn,bookname){
+                searchISBN(file,function(keywords,isbn,bookname,pubdate){
                     var job = new ChangeNameJob(BOOK_SAVE_PATH,file,path.extname(file));
-                    job.writeFile(keywords,isbn,bookname);
+                    job.writeFile(keywords,isbn,bookname,pubdate);
                 });
             }
         }
@@ -406,8 +430,45 @@ function doClean(search) {
 }
 
 function renameByAnswerfile(answerfile){
-    echo(answerfile);
+    echo(renameByAnswerfile,answerfile);
+    fs.readFile(answerfile,function(err,data){
+        //echo(data.toString());
+        var lines = data.toString().split(os.EOL);
+        lines.filter(function(line){
+            return !/^(\s+|)$/.test(line);
+        }).forEach(function(line){
+            echo(line);
+            var items = line.split('|');
+            var oldName = items[0].trim();
+            var searchkeywords = items[1].trim();
+            var isbn = items[2].trim();
+            var newName =  items[3].trim();
+            var job = new ChangeNameJob(BOOK_SAVE_PATH,oldName,path.extname(oldName));
+            job.changeName(newName);
+        });
+    });
 }
+
+function recoveryByAnswerfile(answerfile){
+    echo(renameByAnswerfile,answerfile);
+    fs.readFile(answerfile,function(err,data){
+        //echo(data.toString());
+        var lines = data.toString().split(os.EOL);
+        lines.filter(function(line){
+            return !/^(\s+|)$/.test(line);
+        }).forEach(function(line){
+            echo(line);
+            var items = line.split('|');
+            var oldName = items[0].trim();
+            var searchkeywords = items[1].trim();
+            var isbn = items[2].trim();
+            var newName =  items[3].trim();
+            var job = new ChangeNameJob(BOOK_SAVE_PATH,newName+path.extname(oldName),path.extname(oldName));
+            job.changeName(path.basename(oldName,path.extname(oldName)));
+        });
+    });
+}
+
 
 function main() {
     
@@ -451,27 +512,40 @@ function main() {
             process.exit(0);
         }
     }
+    if (argv.answerfile) {
+        if (!(typeof argv.answerfile === 'boolean')){
+            var answerfile //= path.join(argv.answerfile);
+            if (fs.existsSync(answerfile)) {
+                RENAME_ANSWER_FILE = answerfile;
+            }else{
+                answerfile = path.join(BOOK_SAVE_PATH,argv.answerfile);
+                if (fs.existsSync(answerfile)) {
+                    RENAME_ANSWER_FILE = answerfile;
+                }else{
+                    echo("Error:",answerfile,"not found!");
+                    process.exit(0);
+                }
+            }
+        }else{
+            echo("Error:","--answerfile need provide a file path.")
+            process.exit(0);
+        }        
+    }
+
     if (argv._[0]){
         if (argv._[0] === 'clean') {
             return doClean(argv.s);
         }
         if (argv._[0] === 'rename') {
-            if (argv.answerfile) {
-                if (!(argv.answerfile instanceof Boolean)){
-                    var answerfile = path.join(argv.answerfile);
-                    if (fs.existsSync(answerfile)) return renameByAnswerfile(answerfile);
-                    answerfile = path.join(BOOK_SAVE_PATH,argv.answerfile);
-                    if (fs.existsSync(answerfile)) return renameByAnswerfile(answerfile);
-                    echo("Error:",answerfile,"not found!");
-                }
-                errArgument();
-                process.exit(0);
-                
+            if (argv.withanswerfile||argv.answerfile){
+                return renameByAnswerfile(RENAME_ANSWER_FILE); 
             }
-            if (argv.withanswerfile){
-                return renameByAnswerfile(path.join(BOOK_SAVE_PATH,RENAME_ANSWER_FILE)); 
+            else{
+                return doDefaultRename();
             }
-            return doDefaultRename();
+        }
+        if (argv._[0] === 'recovery') {
+            return recoveryByAnswerfile(RENAME_ANSWER_FILE);
         }
         if (argv._[0] === 'help') return printusage();
         if (argv._[0] === 'version') return printVersion();
@@ -483,8 +557,9 @@ function main() {
 }
 
 function printusage() {
-    echo("Uasge:","node",path.basename(process.argv[1]),"[rename] [-d|--drectory]");
-    echo("      ","node",path.basename(process.argv[1]),"clean [-d|--directory] [-s|--search]");
+    echo("Uasge:","node",path.basename(process.argv[1]),"rename [-d|--drectory <dir>] [--withanswerfile] [--answerfile <filepath>]");
+    echo("      ","node",path.basename(process.argv[1]),"clean [-d|--directory <dir>] [-s|--search] [--answerfile <filepath>]");
+    echo("      ","node",path.basename(process.argv[1]),"recovery [-d|--drectory <dir>] [--answerfile <filepath>]");    
     echo("      ","node",path.basename(process.argv[1]),"version (-v|--version)");
     echo("      ","node",path.basename(process.argv[1]),"help (-h|--help)");
 }
