@@ -522,6 +522,8 @@ function main() {
             var rootDir = path.join(argv.d);
             fs.readdirSync(rootDir);
             BOOK_SAVE_PATH=rootDir;
+            //also need to change answer file path.
+            RENAME_ANSWER_FILE = path.join(BOOK_SAVE_PATH,RENAME_ANSWER_DEFAULT_NAME); 
         }catch(e){
             errArgument();
             echo(e.message.split(",")[1]);
