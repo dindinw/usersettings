@@ -52,6 +52,9 @@ Release site : (http://googlechromereleases.blogspot.com/)
 Home Page Location  : (http://www.chromium.org/administrators/policy-list-3#Homepage)
     
     Software\Policies\Google\Chrome\HomepageLocation
+    -HKEY_CURRENT_USER\Software\Policies\Google\Chrome\HomepageLocation- not work since 28
+
+Policy Template : (http://dl.google.com/dl/edgedl/chrome/policy/policy_templates.zip)
   
 The [documentation][chrome_master_perf_doc] for master_preferences.
 
