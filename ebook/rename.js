@@ -226,9 +226,9 @@ function searchISBN(name,callback){
     searchname = searchname.replace(/[:._\/\(\),]/g," ");
     echo(searchname);
     searchname = searchname.replace(/eBook-DDU/g,"");
-    searchname = searchname.replace(/(19|20)\d{2}/g,"")
+    searchname = searchname.replace(/(19|20)\d{2}/g,"") //year
     echo(searchname);
-    searchname = searchname.replace(new RegExp(MONTH_ABBREV_REGXP+'(\\s\\d{1,2}|)',"g"),""); //month
+    searchname = searchname.replace(new RegExp(MONTH_ABBREV_REGXP+'(\\s+\\d{1,2}|\\s+|\\.)'),""); //month
     echo(searchname);
     searchname = searchname.replace(/(^\s+|\s+$)/g,"") //trim
     echo(searchname);
@@ -253,12 +253,15 @@ function searchISBN(name,callback){
             var $ = cheerio.load(body);
             var isbnStr = $('div[id=result_0]').attr('name');
             var bookname = $('div[id=result_0]').find('span').first().text();
+            bookname = bookname.replace(/:/g," -");
+            bookname = bookname.replace(/\//g,"&")
+
             var length = $('div[id=result_0]').find('span').length
 
             var authorAndDate = $('div[id=result_0]').find('span').eq(1).text();
             echo (authorAndDate);
             var date = new RegExp(MONTH_ABBREV_REGXP+'\\s+'+'\\d{1,2}'+','+'\\s+'+'\\d{4}').exec(authorAndDate)[0];
-            //echo (date);
+            echo (date);
             //echo (Date.parse(date));
             //var pubdate = new Date(Date.parse(date));
             //echo(pubdate);
@@ -436,14 +439,24 @@ function renameByAnswerfile(answerfile){
         var lines = data.toString().split(os.EOL);
         lines.filter(function(line){
             return !/^(\s+|)$/.test(line);
-        }).forEach(function(line){
+        }).filter(function(line){
+            var items = line.split('|');
+            var filename = items[0].trim();
+            var filepath = path.join(BOOK_SAVE_PATH,filename);
+            if (fs.existsSync(filepath)) return true;
+            else 
+                echo("WARING:",filepath,"not exists");
+        })
+        .forEach(function(line){
             echo(line);
             var items = line.split('|');
             var oldName = items[0].trim();
             var searchkeywords = items[1].trim();
             var isbn = items[2].trim();
             var newName =  items[3].trim();
+            var pubdate = items[4].trim();
             var job = new ChangeNameJob(BOOK_SAVE_PATH,oldName,path.extname(oldName));
+            job.pubdate=Date.parse(pubdate);
             job.changeName(newName);
         });
     });
@@ -478,7 +491,7 @@ function main() {
     });;
 
     if (argv._.length == 0 && Object.keys(argv).length == 1){ //without any opts
-        return doRealRename(); //do rename by default
+        return doDefaultRename(); //do rename by default
     }
     Object.keys(argv).forEach(function(entry) {
         if (entry === '_' || entry === 'h' || entry === 'help' 
@@ -531,7 +544,6 @@ function main() {
             process.exit(0);
         }        
     }
-
     if (argv._[0]){
         if (argv._[0] === 'clean') {
             return doClean(argv.s);
