@@ -259,9 +259,12 @@ function searchISBN(name,callback){
             var length = $('div[id=result_0]').find('span').length
 
             var authorAndDate = $('div[id=result_0]').find('span').eq(1).text();
-            echo (authorAndDate);
-            var date = new RegExp(MONTH_ABBREV_REGXP+'\\s+'+'\\d{1,2}'+','+'\\s+'+'\\d{4}').exec(authorAndDate)[0];
-            echo (date);
+            echo ("authorAndDate:",authorAndDate);
+            var authorAndDate_RegExp = new RegExp(MONTH_ABBREV_REGXP+'(\\s+\\d{1,2}\,\\s+\\d{4}|\\s+\\d{4})');
+            var date 
+            if (authorAndDate_RegExp.test(authorAndDate))
+                date = authorAndDate_RegExp.exec(authorAndDate)[0];
+            echo ("pubdate:",date);
             //echo (Date.parse(date));
             //var pubdate = new Date(Date.parse(date));
             //echo(pubdate);
