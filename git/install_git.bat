@@ -41,6 +41,6 @@ goto comment
 @curl -s -L %link_git% -O
 @echo Download : %wingit_file% done!
 
-
+start /wait %wingit_file%
 
 
