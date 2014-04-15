@@ -41,7 +41,7 @@ Installation
 
 * Windows : [install.bat][d_git_1]
 
-[d_git_1]:https://github.com/dindinw/usersettings/raw/master/git/install.bat
+[d_git_1]:https://github.com/dindinw/usersettings/raw/master/git/install_git.bat
 
 ### Chrome
 
