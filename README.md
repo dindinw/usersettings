@@ -56,8 +56,8 @@ Release site : (http://googlechromereleases.blogspot.com/)
 
 Home Page Location  : (http://www.chromium.org/administrators/policy-list-3#Homepage)
     
-    ~~Software\Policies\Google\Chrome\HomepageLocation~~
-    ~~HKEY_CURRENT_USER\Software\Policies\Google\Chrome\HomepageLocation~~ 
+~~Software\Policies\Google\Chrome\HomepageLocation~~
+~~HKEY_CURRENT_USER\Software\Policies\Google\Chrome\HomepageLocation~~ 
 
 simply create reg key will not work since 28
 
