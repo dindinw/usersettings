@@ -19,7 +19,7 @@ sc stop gupdatem
 sc config gupdatem start= disabled
 
 
-rem probably better:
+@rem probably better:
 
 @rem reg add HKLM\SOFTWARE\Policies\Google\Update /f /v DisableAutoUpdateChecksCheckboxValue /d 1 /t reg_dword
 
