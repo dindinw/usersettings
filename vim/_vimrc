@@ -14,7 +14,7 @@ set nu
 set ru
 
 "backup files saving dir"
-set backupdir=C:\Temp
+set backupdir=$TEMP
 
 "open file color syntax"
 syntax on
