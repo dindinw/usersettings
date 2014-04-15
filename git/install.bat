@@ -23,12 +23,24 @@
 @echo link_msysgit_net  : %link_msysgit_net%
 @echo --------------------------------------------------------------------------
 
+
+@rem ---------------------------------------------------------------------------
+goto comment
 @del tmpFile
 @for /f "tokens=8 delims=/" %%e in ( "%link_msysgit_net%" ) do @set msysgit_net_file=%%e
 @echo Download : %msysgit_net_file%
 @curl -s -L %link_msysgit_net% -O
 @echo Download : %msysgit_net_file% done!
-
 %msysgit_net_file%
+:comment
+@rem ---------------------------------------------------------------------------
+
+@del tmpFile
+@for /f "tokens=8 delims=/" %%e in ( "%link_git%" ) do @set wingit_file=%%e
+@echo Download : %wingit_file%
+@curl -s -L %link_git% -O
+@echo Download : %wingit_file% done!
+
+
 
 
