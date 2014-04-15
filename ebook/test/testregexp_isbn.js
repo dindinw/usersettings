@@ -1,0 +1,10 @@
+var ISBN10_REGXP=/\d{9}[\d|X]/
+var ISBN13_REGXP=/(978|979)(?:-|)\d{9}[\d|X]/
+
+echo("13",ISBN13_REGXP.test("978-0321942050"));
+echo("13",ISBN13_REGXP.test("9780321942050"));
+echo("13",ISBN13_REGXP.test("978-6"));
+echo("10",ISBN10_REGXP.test("0321942051"));
+echo("13",ISBN13_REGXP.test("0321942051"));
+echo("10",ISBN10_REGXP.test("978-0321942050"));
+echo("13",ISBN13_REGXP.test("978-0321942050"));
