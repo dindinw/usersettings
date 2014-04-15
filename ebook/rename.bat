@@ -8,8 +8,8 @@
 :amazonIsdn
 @echo input ISDN is %~1
 @set isdn=%~1
+@curl -s -L http://www.amazon.com/dp/%isdn% 1>tmpFile%isdn%
 @curl -s -L http://www.amazon.com/dp/%isdn% 1>tmpFile
-
 @rem do check first
 
 @findstr /R "btAsinTitle" tmpFile > tempfindoutput
