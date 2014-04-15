@@ -8,6 +8,7 @@ WGET115=http://ftp.gnu.org/gnu/wget/wget-1.15.tar.gz
 GNUTLS=ftp://ftp.gnutls.org/gcrypt/gnutls/w32/gnutls-3.2.12-w32.zip
 GNUTLS_SIG=ftp://ftp.gnutls.org/gcrypt/gnutls/w32/gnutls-3.2.12-w32.zip.sig
 
+MSI_PATH = https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7BCA8DF948-A4C1-39A2-F252-9F2344D3C552%7D%26lang%3Den%26browser%3D4%26usagestats%3D0%26appname%3DGoogle%2520Chrome%26needsadmin%3Dprefers/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi
 #wget 1.14 mingw32
 #wget $GNUTLS
 #wget $GNUTLS_SIG
