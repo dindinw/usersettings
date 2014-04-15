@@ -59,7 +59,7 @@ Home Page Location  : (http://www.chromium.org/administrators/policy-list-3#Home
 * ~~Software\Policies\Google\Chrome\HomepageLocation~~
 * ~~HKEY_CURRENT_USER\Software\Policies\Google\Chrome\HomepageLocation~~ 
 
-simply create reg key will not work since 28
+(_simply create reg key will not work since 28_)
 
 Policy Template : (http://dl.google.com/dl/edgedl/chrome/policy/policy_templates.zip)
   
