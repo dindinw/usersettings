@@ -23,6 +23,7 @@
 @echo link_msysgit_net  : %link_msysgit_net%
 @echo --------------------------------------------------------------------------
 
+@echo Notice: the full install package is missing since version 'Git-1.9.2-preview20140411'
 
 @rem ---------------------------------------------------------------------------
 goto comment
@@ -42,5 +43,4 @@ goto comment
 @echo Download : %wingit_file% done!
 
 start /wait %wingit_file%
-
 
