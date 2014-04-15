@@ -1,0 +1,25 @@
+{
+    "cmd": ["node","$file"],
+
+    "selector": "source.js",
+
+
+    "variants":
+    [
+        {
+            //"cmd": ["xterm -e 'source $file;bash '"],
+            "cmd": ["xterm -e 'node $file;bash'"],
+            "name": "Run Node Script in External Shell...",  //Ctrl+Shift+P then type "Run in External Shell..."
+            "windows": 
+            {
+                "cmd" : ["start","cmd","/K","echo node $file&&node $file"] //remaining in the open shell
+            },
+            "osx": //TODO
+            {
+                "cmd" : ["TODO"]
+            },
+             "shell":true
+
+        }
+    ]
+}
