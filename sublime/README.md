@@ -9,6 +9,23 @@ Offical home page : http://www.sublimetext.com/
 [v2_down]:http://www.sublimetext.com/2
 [v3_down]:http://www.sublimetext.com/3
 
+### Note for XP 
+
+** Unicode Error **
+`UnicodeDecodeError: 'ascii' codec can't decode byte 0xe6 in position 15: ordinal not in range(128)`
+
+need to change a line in _Sublime Text 2\Packages\Default\exec.py_
+
+```Python
+for k, v in proc_env.iteritems():
+            proc_env[k] = os.path.expandvars(v).encode(sys.getfilesystemencoding())
+# change the line to 
+proc_env[k] = os.path.expandvars(v.decode(sys.getfilesystemencoding())).encode(sys.getfilesystemencoding())
+```
+More details : see [1][ref1] and [2][ref2]
+
+[ref1]:https://github.com/misfo/Shell-Turtlestein/issues/6#issuecomment-4249064
+[ref2]:http://www.sublimetext.com/forum/viewtopic.php?f=3&t=2441&start=0&hilit=getfilesystemencoding
 
 ### Setup Sublime Text 
 

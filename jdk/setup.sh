@@ -103,6 +103,15 @@ function callWget()
         -O $DOWNLOAD_DIR/$JDK_FILE
 }
 
+function callCurl()
+{
+    echo "Download URL  : $DOWNLOAD_URL"
+    echo "Download File : $JDK_FILE"
+    curl -L --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
+        "$DOWNLOAD_URL" \
+        -o $DOWNLOAD_DIR/$JDK_FILE
+}
+
 function checkMD5SUM_Linux()
 {
     local result=$(md5sum $DOWNLOAD_DIR/$JDK_FILE| awk '{ print $1 }')
@@ -140,7 +149,8 @@ function downlaodJDK()
         echo "$DOWNLOAD_DIR/$JDK_FILE found, Checksum OK, download cancaled."
     fi
     if [[ $executeDownload == true ]]; then
-        callWget
+        #callWget
+        callCurl
     fi
 }
 
