@@ -100,7 +100,7 @@ function callWget()
     wget --no-cookies --no-check-certificate \
         --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
         "$DOWNLOAD_URL" \
-        -O $DOWNLOAD_DIR/$JDK_FILE
+        -O "$DOWNLOAD_DIR/$JDK_FILE"
 }
 
 function callCurl()
@@ -109,12 +109,12 @@ function callCurl()
     echo "Download File : $JDK_FILE"
     curl -L --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
         "$DOWNLOAD_URL" \
-        -o $DOWNLOAD_DIR/$JDK_FILE
+        -o "$DOWNLOAD_DIR/$JDK_FILE"
 }
 
 function checkMD5SUM_Linux()
 {
-    local result=$(md5sum $DOWNLOAD_DIR/$JDK_FILE| awk '{ print $1 }')
+    local result=$(md5sum "$DOWNLOAD_DIR/$JDK_FILE"| awk '{ print $1 }')
     echo $result 
 }
 
