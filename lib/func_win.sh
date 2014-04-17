@@ -1,3 +1,4 @@
+#!/bin/bash
 uvar="HKCU\Environment"
 mvar="HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
 
@@ -36,6 +37,29 @@ function setUserEnv(){
     local key=$1
     local value=$2
     setx "$key" "$value" 2>&1 > /dev/null
+}
+
+function setUserEnvXP(){
+    local key=$1
+    local value=$2
+    setRegByVarAndKey "$uvar" "$key" "$value" "force"
+    return $?
+}
+function setRegByVarAndKey(){
+    local root=$1
+    local key=$2
+    local value=$3
+    local force=$4
+    local opt=
+    echo 'Path PATH TEMP TMP'|grep $key 2>&1 > /dev/null
+    if [[ $? -eq 0 ]]; then
+        opt=" //t REG_EXPAND_SZ"
+    fi
+    if [ "$force" == "force" ]; then 
+        opt="$opt //f"
+    fi
+    reg add "$root" //v "$key" //d "$value" $opt #2>&1 > /dev/null
+    return $?
 }
 
 ################################################################################

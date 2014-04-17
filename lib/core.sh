@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function currentDir()
 {
     local DIR=$( cd "$( dirname "$0" )" && pwd )
@@ -16,6 +18,7 @@ OS_LINUX="Linux"
 OS_MAC="Mac"
 OS_WIN="Win"
 OS="UNKNOWN"
+OS_VERSION="UNKNOWN"
 
 # MACH is the machine arch 32bit or 64bit
 MACH_32="x86_32"
@@ -57,6 +60,17 @@ function sysInfo()
         else
             # 32 bit
             MACH=$MACH_32
+        fi
+
+        local version=
+        version=$(echo wmic os get Version)
+        version=$(echo $version|grep ^5.1)
+        if [[ $? -eq 0 ]]; then
+            VERSION=5.1
+        fi
+        version=$(echo $version|grep ^6.1)
+        if [[ $? -eq 0 ]]; then
+            VERSION=6.1
         fi
     fi
     if [[ "$OS" == "UNKNOWN" ]] || [[ "$MACH" == "UNKNOWN" ]] \
