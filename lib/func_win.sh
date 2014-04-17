@@ -36,7 +36,12 @@ function getSysEnv(){
 function setUserEnv(){
     local key=$1
     local value=$2
-    setx "$key" "$value" 2>&1 > /dev/null
+    echo $OS_VERSION|grep ^5.1 2>&1 > /dev/null # if XP
+    if [[ $? -eq 0 ]]; then
+        setUserEnvXP $key $value
+    else
+        setx "$key" "$value" 2>&1 > /dev/null
+    fi
 }
 
 function setUserEnvXP(){
@@ -58,7 +63,7 @@ function setRegByVarAndKey(){
     if [ "$force" == "force" ]; then 
         opt="$opt //f"
     fi
-    reg add "$root" //v "$key" //d "$value" $opt #2>&1 > /dev/null
+    reg add "$root" //v "$key" //d "$value" $opt 2>&1 > /dev/null
     return $?
 }
 
@@ -78,7 +83,19 @@ function delUserEnv(){
 function setSysEnv(){
     local key=$1
     local value=$2
-    setx "$key" "$value" //M  2>&1 >/dev/null
+    echo $OS_VERSION|grep ^5.1 2>&1 > /dev/null # if XP
+    if [[ $? -eq 0 ]]; then
+        setUserEnvXP $key $value
+    else
+        setx "$key" "$value" //M  2>&1 >/dev/null
+    fi
+}
+
+function setUserEnvXP(){
+    local key=$1
+    local value=$2
+    setRegByVarAndKey "$mvar" "$key" "$value" "force"
+    return $?
 }
 
 function delSysEnv(){

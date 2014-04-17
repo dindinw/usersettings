@@ -18,6 +18,7 @@ OS_LINUX="Linux"
 OS_MAC="Mac"
 OS_WIN="Win"
 OS="UNKNOWN"
+OS_NAME="UNKNOWN"
 OS_VERSION="UNKNOWN"
 
 # MACH is the machine arch 32bit or 64bit
@@ -54,7 +55,7 @@ function sysInfo()
     else #WIN
         OS="Win"
         FILE_EXT=$FILE_EXT_WIN
-        if [[ "$(wmic cpu get addresswidth|awk '$1 ~/64/ {print $1}')" == "64" ]]; then
+        if [[ "$(echo cpu get addresswidth|wmic 2> /dev/null |awk '$1 ~/64/ {print $1}')" == "64" ]]; then
             # 64 bit
             MACH=$MACH_64
         else
@@ -62,16 +63,9 @@ function sysInfo()
             MACH=$MACH_32
         fi
 
-        local version=
-        version=$(echo wmic os get Version)
-        version=$(echo $version|grep ^5.1)
-        if [[ $? -eq 0 ]]; then
-            VERSION=5.1
-        fi
-        version=$(echo $version|grep ^6.1)
-        if [[ $? -eq 0 ]]; then
-            VERSION=6.1
-        fi
+        OS_NAME=$(echo 'os get name'|wmic 2>/dev/null |awk -F "|" '$1 ~ /^Mic/ {print $1}')
+        OS_VERSION=$(echo 'os get version' | wmic 2> /dev/null |awk '$1 ~ /^[0-9]/ {print $1}')
+        
     fi
     if [[ "$OS" == "UNKNOWN" ]] || [[ "$MACH" == "UNKNOWN" ]] \
         || [[ "$FILE_EXT" == "UNKNOWN" ]]; then
