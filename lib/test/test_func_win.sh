@@ -1,3 +1,5 @@
+#!/bin/bash
+source ../core.sh
 source ../func_win.sh
 
 echo "========================================================================="
@@ -48,3 +50,5 @@ getSysEnv "FOO"
 getAllSysEnv
 delSysEnv "FOO"
 getAllSysEnv
+
+rm -f "TempWmicBatchFile.bat" &> /dev/null

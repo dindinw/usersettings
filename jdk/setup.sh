@@ -1,3 +1,4 @@
+#!/bin/bash
 # Links
 
 # JDK 7
@@ -241,7 +242,7 @@ function main()
     preparePlatform
     downlaodJDK
     echo "Install $JDK_FILE ..."
-    #installJDK_$OS
+    installJDK_$OS
     echo "Verify $JDK_NAME installed ..."
     verifyJDKInstalled
     echo "Setup $JDK_NAME Env ..."
