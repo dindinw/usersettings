@@ -23,3 +23,9 @@ Some Notes
 Download
 --------
 
+Offical MinGW installer
+http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download
+Some Notes:
+    * Default Download places `C:\MinGW\var\cache\mingw-get\packages`
+    * All matedata database inside `C:\MinGW\var\lib\mingw-get\data`
+
