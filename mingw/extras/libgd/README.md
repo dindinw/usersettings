@@ -18,5 +18,4 @@ cmake -G"MSYS Makefiles" -DCMAKE_LIBRARY_PATH=c:\msysgit\msysgit\mingw\lib -DCMA
 
 set MINGW=c:\msysgit\msysgit\mingw
 cmake -G"MSYS Makefiles" -DCMAKE_LIBRARY_PATH=%MINGW%\lib -DCMAKE_INCLUDE_PATH=%MINGW%\include -DENABLE_JPEG=On -DBUILD_TEST=On -DCMAKE_RELEASE_TYPE=DEBUG -DZLIB_INCLUDE_DIR=%MINGW%\include -DPNG_PNG_INCLUDE_DIR=%MINGW%\include -DJPEG_INCLUDE_DIR=%MINGW%\include -DFREETYPE_INCLUDE_DIRS=%MINGW%\include
-
 ```
