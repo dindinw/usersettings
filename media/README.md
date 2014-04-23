@@ -35,6 +35,13 @@ Usage
     ffmpeg -f dshow -i audio="内装麦克风 (Conexant 20672 SmartAudi" -acodec libmp3lame -bufsize 3000k output.mp3
     ```  
 
+    the ffmpeg actually can capture a image , see below
+
+    ```
+    ffmpeg -f dshow -i video="Integrated Camera" output.jpeg 2>NUL
+    ```
+
+
     note: the chinese character is supported. but the list command may get a unrecognized chars, may need to find the 
     correct name in registy. or by a tool (http://www.videohelp.com/download/graphedit10-090724.zip)
 
