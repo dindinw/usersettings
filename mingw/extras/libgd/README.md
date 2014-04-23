@@ -4,10 +4,9 @@ lastest version 2.1.0
 MinGW build
 ```
 ./configure --with-png=/mingw --with-freetype=/mingw --prefix=/mingw
-
+```
 
 CMake build
-
 ```
 cmake -G "MSYS Makefiles" -PNG_PNG_INCLUDE_DIR=C:\msysgit\msysgit\mingw -DENABLE_PNG=1 -DENABLE_JPEG=1 -DENABLE_TIFF=0 -DENABLE_FREETYPE=1 -DENABLE_FONTCONFIG=0 -DCMAKE_INSTALL_PREFIX=C:\msysgit\msysgit\mingw
 
