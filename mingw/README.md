@@ -31,4 +31,11 @@ Some Notes:
   
   * Default Download places `C:\MinGW\var\cache\mingw-get\packages`
   * All matedata database inside `C:\MinGW\var\lib\mingw-get\data`
+  * After installation, need to create a file `C:\MinGW\msys\1.0\etc\fstab`
+    - add a line reads below, so that the '/mingw' is auto-mount
 
+      ```
+      C:\MinGW   /mingw
+      ```
+    
+    - or execute command `mount 'C:\MinGW' /mingw` in the msys shell.  
