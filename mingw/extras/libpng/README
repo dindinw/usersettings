@@ -1,0 +1,5 @@
+Download : ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-1.6.10.tar.xz
+
+```
+make install prefix=/mingw -f scripts/makefile.msys
+```

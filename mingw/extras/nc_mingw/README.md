@@ -6,7 +6,7 @@ https://github.com/dindinw/usersettings/raw/master/mingw/extras/nc_mingw/nc.exe
 Download from the page (http://www.securityfocus.com/tools/139) 
 (aka. http://joncraton.org/files/nc111nt.zip)
 `md5sum 37f2383aa4e825e7005c74099f8bb2c3`
-Some interest note from (http://me.abelcheung.org/2008/07/04/netcat-for-win32/)
+Some interest note from (http://me.abelcheung.org/2008/07/04/netcat-for-win32/:wq)
 
 
 Build with MingW

@@ -6,7 +6,7 @@ Some Notes
  * gnuwin32 [http://downloads.sourceforge.net/gnuwin32]
 
  * tdm-gcc [http://downloads.sourceforge.net/tdm-gcc] 
-   combine suite 
+   gcc only, default no make, no bash shell.
  
  * rubyinstaller
    tdm + ruby [https://github.com/downloads/oneclick/rubyinstaller/DevKit-tdm-32-4.5.2-20111229-1559-sfx.exe]
@@ -19,4 +19,7 @@ Some Notes
 
  * msysgit [https://github.com/msysgit/msysgit/]
    git + msys
+
+Download
+--------
 
