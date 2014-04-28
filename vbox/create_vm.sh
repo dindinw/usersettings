@@ -1,6 +1,7 @@
+#!/bin/bash
 
-
-function setup_vars(){
+function setup_vars()
+{
     NAME=centos65-x86_64
     TYPE=RedHat_64
     INSTALLER="./isos/CentOS-6.5-x86_64-minimal.iso"
@@ -115,11 +116,23 @@ function setup_kickstart_service(){
 function setup_tftp_folder(){
     #TFTP=${1:-"$VBOX_TFTP_DEFAULT"}
     TFTP=${1:-"$(pwd)/tftp"}
-    echo $TFTP
-    if [ -e ]
+
+    if [ -e ${TFTP} ]; then
+        echo ${TFTP} exist, clean by remove all.
+        rm -rf ${TFTP}
+    fi
     mkdir -p "${TFTP}/pxelinux.cfg"
     cp -p pxelinux.0 "${TFTP}/."
+    create_pxecfg_$2 ${TFTP}/pxelinux.cfg/default ${3}
+}
 
+function create_pxecfg_centos6() {
+cat > $1 << EOL
+default centos6
+LABEL centos6
+    KERNEL images/centos/5/x86/vmlinuz
+    APPEND initrd=images/centos/5/x86_64/initrd.img ks=${2}
+EOL
 }
 
 function main(){
@@ -129,5 +142,5 @@ function main(){
 #. ../lib/core.sh
 #main
 #setup_vars
-#setup_kickstart_service ks_centos.cfg
-setup_tftp_folder
+#setup_ki#!/bin/sh -eckstart_service ks_centos.cfg
+setup_tftp_folder "" "centos6" "http://10.0.2.2:8088"
