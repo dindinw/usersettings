@@ -1,1 +1,5 @@
-tftp/
+/tftp/
+/isos/
+/boxes/
+tftpd32.log
+TempWmicBatchFile.bat
