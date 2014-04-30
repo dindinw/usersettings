@@ -11,5 +11,3 @@ echo "====================================================================="
 
 currentDir
 
-rm -f "TempWmicBatchFile.bat" &> /dev/null
-

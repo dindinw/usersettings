@@ -6,6 +6,11 @@ function currentDir()
     echo $DIR
 }
 
+function clean_wmi_tmp_file()
+{
+    rm -f "TempWmicBatchFile.bat" &> /dev/null
+}
+
 ################################################################################
 #  name : sysInfo
 #  desc : Get the Platform Information
@@ -74,7 +79,7 @@ function sysInfo()
     fi
 }
 sysInfo
-
+clean_wmi_tmp_file
 
 LIGHTGREEN="\[\033[1;32m\]"
 LIGHTRED="\[\033[1;31m\]"
