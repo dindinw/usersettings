@@ -26,9 +26,9 @@ var RENAME_ANSWER_FILE = path.join(BOOK_SAVE_PATH,RENAME_ANSWER_DEFAULT_NAME);
 /* Regxp */
 var MONTH_REGXP="(January|February|March|April|May|June|July|August|September|October|November|December).*"
 var MONTH_ABBREV_REGXP="(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
-var ISBN10_REGXP="\d{9}[\d|X]"
-var ISBN13_REGXP="(978|979)(?:-|)\d{9}[\d|X]"
-var EDTION_REGXP="\d{1}"
+var ISBN10_REGXP="\\d{9}[\\d|X]"
+var ISBN13_REGXP="(978|979)(?:-|)\\d{9}[\\d|X]"
+var EDTION_REGXP="\\d{1}"
 var ASIN_REGXP="[A-Z0-9]{10}"
 
 
@@ -208,12 +208,15 @@ function parseISBN(name,matchFromStart){
 
     if (isbn13.test(name)) {    
         isbn = isbn13.exec(name)[0];
+        //echo("isbn13",isbn);
     }
     else if (isbn10.test(name)){
         isbn = isbn10.exec(name)[0];
+        //echo("isbn10",isbn);
     }
     else if (asin.test(name)) { 
         isbn=asin.exec(name)[0];
+        //echo("asin",isbn);
     }
     if (isbn === undefined){
         echo("WARNING :","Can't parse a isdn or asin from '",name,"'");

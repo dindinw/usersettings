@@ -1,0 +1,400 @@
+
+TechNet Blogs ? Digging in ? NTFS Time Stamps --file created in 1601, modified in 1801 and accessed in 2008!!
+NTFS Time Stamps --file created in 1601, modified in 1801 and accessed in 2008!!
+ganand ganand
+19 Feb 2008 1:12 PM
+
+Technorati Tags: NTFS
+
+So many times we have seen Server Admins asking how to figure out whether someone accessed there
+
+files or not or is it possible to play with NTFS time stamps or how exactly time stamps change and under
+
+what scenarios. I have heard of this issue a lot and seen people enquiring on same, so i though lets play
+
+with a test notepad file and see what Time stamps i can change and then what really happens in MFT.
+
+To read more about Time stamps please refer the following public links.
+
+========================
+
+"How NTFS Works" (http://technet2.microsoft.com/WindowsServer/en/library/8cc5891d-bf8e-4164-862d-dac5418c59481033.mspx?mfr=true)
+
+http://technet2.microsoft.com/WindowsServer/en/Library/80dc5066-7f13-4ac3-8da8-48ebd60b44471033.mspx?mfr=true
+
+Description of NTFS date and time stamps for files and folders
+
+http://support.microsoft.com/kb/299648
+
+Time Stamps Change When Copying From NTFS to FAT
+
+http://support.microsoft.com/kb/127830
+
+========================
+
+In quick short words
+
+Last modified time relates to the last time an application modified the unnamed data attribute¡ªwhat we
+
+normally think of as ¡°the file.¡±
+
+Last entry modified stamp relates to an update or modification of any attribute¡ªdata, metadata, named streams, etc.
+
+Last access is updated by activity involving a file, but the stamp is not updated unless the last access occurs
+
+after a certain amount of time from the last update of the last access stamp. 
+
+Two metadata attributes of interest to investigators in the NTFS file system are the Master File Table (MFT)
+
+$STANDARD_INFO and $FILE_NAME. Both attributes contain their own entry last modified timestamps. The
+
+MFT $STANDARD_INFO attribute contains general information about a file such as flags, last accessed,
+
+written, created times, owner, and security ID. The MFT $FILE_NAME attribute contains file name in Unicode,
+
+and also the last accessed, written and created times.
+
+We have four time stamps¡­M MODIFIED¡­.A ACESSED¡­¡­.C CREATED¡­E ENTRY MODIFED¡­known as  MACE too sometimes.
+
+ 
+
+clip_image002
+
+ 
+
+so I created a test notepad file with the name ntfs.txt and i used a 3rd party utility timestomp.exe (from http://www.metasploit.com/projects/antiforensics/ ) to change the attributes of my file which was otherwise
+
+created today i.e. 19th feb, 2008.
+
+C:\>TimeStomp ntfs.txt -c "Monday 7/25/1601 5:15:55 AM"
+
+C:\>TimeStomp ntfs.txt -m "Monday 7/25/1701 5:15:55 AM"
+
+C:\>TimeStomp ntfs.txt -a "Monday 7/25/1801 5:15:55 AM"
+
+------------------------------------------------
+
+now i checked in explorer and to my surprise I have a file which was created in year 1601 (much before i was born,NTFS
+
+file system was born, computers were born) wow!!
+
+Now i used another tool named NFI ( http://support.microsoft.com/kb/q253066/ ) to see the attributes and grab the
+
+file record segment of the file ntfs.txt
+
+------------------------------------
+
+C:\Documents and Settings\ganand\Desktop\mike\ntfs\tools>nfi c:\ntfs.txt
+
+NTFS File Sector Information Utility.
+
+Copyright (C) Microsoft Corporation 1999. All rights reserved.
+
+\ntfs.txt
+
+    $STANDARD_INFORMATION (resident)
+
+    $FILE_NAME (resident)
+
+    $DATA (resident)
+
+ 
+
+I haven't wrote anything in the ntfs.txt till now and that why i don't see an $OBJECT_ID entry..so i wrote some garbage
+
+text in it and saved it.
+
+C:\Documents and Settings\ganand\Desktop\mike\ntfs\tools>nfi c:\ntfs.txt
+
+NTFS File Sector Information Utility.
+
+Copyright (C) Microsoft Corporation 1999. All rights reserved.
+
+\ntfs.txt
+
+    $STANDARD_INFORMATION (resident)
+
+    $FILE_NAME (resident)
+
+    $OBJECT_ID (resident)
+
+    $DATA (resident)
+
+aaaah now i see   $OBJECT_ID attribue too (The $OBJECT_ID attribute has a type identifier of 64 and stores a file's
+
+128-bit global object identifier that can be used to address the file instead of its name. This allows a file to be found
+
+even when its name is changed.)
+
+but the problem is i need to find out where on disk (on which sector) this file is being written to and NFI is not giving
+
+me any output for same....what to do????
+
+ohh i figured out that all the attributes and specially data attribute is resident..so i filled lot of garbage data in ntfs.txt and save it.
+
+tried NFI again and finally got what i was looking for---------------
+
+C:\Documents and Settings\ganand\Desktop\mike\ntfs\tools>nfi c:\ntfs.txt
+
+NTFS File Sector Information Utility.
+
+Copyright (C) Microsoft Corporation 1999. All rights reserved.
+
+\ntfs.txt
+
+    $STANDARD_INFORMATION (resident)
+
+    $FILE_NAME (resident)
+
+    $OBJECT_ID (resident)
+
+    $DATA (nonresident)
+
+        logical sectors 88364256-88364263 (0x54454e0-0x54454e7)
+
+        logical sectors 115305560-115305567 (0x6df6c58-0x6df6c5f)
+
+------------------------------
+
+now from sector I can get the File record segment of this file-------------------
+
+C:\Documents and Settings\ganand\Desktop\mike\ntfs\tools>nfi c: 88364256
+
+NTFS File Sector Information Utility.
+
+Copyright (C) Microsoft Corporation 1999. All rights reserved.
+
+***Logical sector 88364256 (0x54454e0) on drive C is in file number 44650.------------converting into hexa decimal
+
+------------AE6A------44650
+
+\ntfs.txt
+
+    $STANDARD_INFORMATION (resident)
+
+    $FILE_NAME (resident)
+
+    $OBJECT_ID (resident)
+
+    $DATA (nonresident)
+
+        logical sectors 88364256-88364263 (0x54454e0-0x54454e7)
+
+        logical sectors 115305560-115305567 (0x6df6c58-0x6df6c5f)
+
+----------------------------
+
+Now i wanted to look at the attributes using another NTFS utility------------------------------
+
+    STANDARD_INFORMATION {
+
+        CreationTime          :0x0000a114ff05fb80 07/24/1601 23:45:55.0000-------------------though this makes sense
+
+        LastModificationTime  :0x01c872de3753158f 02/19/2008 10:00:11.0655-----------------why this --aaah because
+
+i have added data into ntfs.txt after using timestomp so it again changed the modification time stamp-----now makes sense
+
+        LastChangeTime        :0x01c872de3753158f 02/19/2008 10:00:11.0655--------------
+
+        LastAccessTime        :0x01c872de3753158f 02/19/2008 10:00:11.0655---------------
+
+        FileAttributes        :0x00000020
+
+        MaximumVersions       :0x00000000
+
+        VersionNumber         :0x00000000
+
+        ClassId               :0x00000000
+
+        OwnerId               :0x00000000
+
+        SecurityId            :0x000002fd
+
+        QuotaCharged          :0x0000000000000000
+
+        Usn                   :0x000000004a5e3e78
+
+    }
+
+_ATTRIBUTE_RECORD_HEADER {
+
+    ATTRIBUTE_TYPE_CODE TypeCode         :0x00000030 ($FILE_NAME)
+
+    ULONG RecordLength                   :0x00000070
+
+    UCHAR FormCode                       :0x00
+
+    UCHAR NameLength                     :0x00
+
+    USHORT NameOffset                    :0x0000      ""
+
+    USHORT Flags                         :0x0000
+
+    USHORT Instance                      :0x0004
+
+    RESIDENT_FORM {
+
+        ULONG ValueLength            :0x0052
+
+        USHORT ValueOffset           :0x0018
+
+        UCHAR ResidentFlags          :0x0001
+
+        UCHAR Reserved               :0x0000
+
+    }
+
+}
+
+    FILE_NAME {
+
+        ParentDirectory Frs, Seq        < 5 , 5 >
+
+        DUPLICATED_INFORMATION Info {
+
+            CreationTime         :01c872da933c2514 02/19/2008 09:34:07.0868--------------------//////this never changed////
+
+            LastModificationTime :01c872da933c2514 02/19/2008 09:34:07.0868
+
+            LastChangeTime       :01c872da933c2514 02/19/2008 09:34:07.0868
+
+            LastAccessTime       :01c872da933c2514 02/19/2008 09:34:07.0868
+
+            AllocatedLength      :0000000000000000
+
+            FileSize             :0000000000000000
+
+            FileAttributes       :00000020
+
+--------------------------------------------------
+
+lets do once again
+
+C:\>TimeStomp ntfs.txt -a "Monday 7/25/1801 5:15:55 AM"
+
+C:\>TimeStomp ntfs.txt -m "Monday 7/25/1801 5:15:55 AM"
+
+----------------------
+
+ 
+
+ 
+
+ntfs (2)
+
+ 
+
+    STANDARD_INFORMATION {
+
+        CreationTime          :0x0000a114ff05fb80 07/24/1601 23:45:55.0000----------------------------
+
+        LastModificationTime  :0x00e0da734e1ffb80 07/24/1801 23:45:55.0000---------------------------
+
+        LastChangeTime        :0x01c872de3753158f 02/19/2008 10:00:11.0655----------------------------
+
+        LastAccessTime        :0x00e0da734e1ffb80 07/24/1801 23:45:55.0000-----------------------
+
+        FileAttributes        :0x00000020
+
+        MaximumVersions       :0x00000000
+
+        VersionNumber         :0x00000000
+
+        ClassId               :0x00000000
+
+        OwnerId               :0x00000000
+
+        SecurityId            :0x000002fd
+
+        QuotaCharged          :0x0000000000000000
+
+        Usn                   :0x000000004a5e8828
+
+  
+
+    FILE_NAME {
+
+        ParentDirectory Frs, Seq        < 5 , 5 >
+
+        DUPLICATED_INFORMATION Info {
+
+            CreationTime         :01c872da933c2514 02/19/2008 09:34:07.0868--------------------------------THEY NEVER CHANGED
+
+            LastModificationTime :01c872da933c2514 02/19/2008 09:34:07.0868----------------------------------
+
+            LastChangeTime       :01c872da933c2514 02/19/2008 09:34:07.0868------------------------------
+
+            LastAccessTime       :01c872da933c2514 02/19/2008 09:34:07.0868-----------------------------------
+
+            AllocatedLength      :0000000000000000
+
+            FileSize             :0000000000000000
+
+            FileAttributes       :00000020
+
+============
+
+If I undesrtand right FN mace values should be older than SIA mace values or same depending on different scenarios. But how easy it was to play with these time stamps on ntfs.txt file!!
+
+===========================
+
+Gaurav Anand
+
+This posting is provided "AS IS" with no warranties, and confers no rights.
+
+[Share on Facebook]
+[Share on LinkedIn]
+[Share on Reddit]
+[Share on Twitter]
+[More]
+Comments
+
+    Anonymous Wayne
+    30 Mar 2008 2:58 PM
+
+    <p>Hello, interesting post, can you please provide some information the utility you've used to list the NTFS file attributes? &nbsp;I'm trying to do a similar thing and can't find a win32 utility for this. &nbsp;I have used NFI to determine which attributes are resident/nonresident, but can't find anything to enumerate the attributes. Thanks.</p>
+    Anonymous Anon
+    31 Mar 2008 10:55 PM
+
+    <p>What's &quot; another NTFS utility&quot;?</p>
+    Anonymous Dan
+    15 Apr 2008 10:59 PM
+
+    <p>After using NFI to find what types of information is stored on each file, there is the following comment:</p> <p>&quot;Now i wanted to look at the attributes using another NTFS utility&quot;. I think his question and i know mine is, What is the name of the utility used to extract the NTFS file attributes ass seen below that line.</p>
+    Anonymous ganand
+    26 Apr 2008 2:54 PM
+
+    <p>thats an internal utilty ..thats why written as &quot;another ntfs utility&quot;</p>
+    Anonymous kmilo
+    24 May 2008 7:12 AM
+
+    <p>You can see the FILE_NAME attribute with the open source NtfsProgs <a rel="nofollow" target="_new" href="http://gnuwin32.sourceforge.net/packages/ntfsprogs.htm">http://gnuwin32.sourceforge.net/packages/ntfsprogs.htm</a></p> <p>The way I show in:</p> <p><a rel="nofollow" target="_new" href="http://www.slcolombia.org/Seguridad/NTFSTimeStamps">http://www.slcolombia.org/Seguridad/NTFSTimeStamps</a></p>
+    Anonymous jake
+    4 Jun 2008 7:14 AM
+
+    <p>I agree with the above posters. &nbsp;I could forgive the poor grammar until we got to the internal tool part. &nbsp;How about a release of the tool?</p>
+    atif atif
+    25 Aug 2008 12:55 PM
+
+    <p>&quot; another NTFS utility&quot;? &nbsp; &nbsp; reference to the subject......</p> <p>Mr.ganand , can u explain how to use the other utility, that will be handful for </p> <p>others</p> <p>i have downloaded source ,NtfsProgs , could you kind enought to explain how you use </p> <p>ntfsinfo.exe &nbsp;or any other exes for the above demos ...</p> <p>FILE_NAME { </p> <p> &nbsp; &nbsp; &nbsp; &nbsp;ParentDirectory Frs, Seq &nbsp; &nbsp; &nbsp; &nbsp;&lt; 5 , 5 &gt; </p> <p> &nbsp; &nbsp; &nbsp; &nbsp;DUPLICATED_INFORMATION Info { </p> <p> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;CreationTime &nbsp; &nbsp; &nbsp; &nbsp; :01c872da933c2514 02/19/2008 09:34:07.0868--------------------------------THEY NEVER CHANGED </p> <p>thankyou</p>
+    Anonymous Rob Lee
+    18 May 2009 8:28 PM
+
+    <p>Is their a native tool that can easily modify windows timestamps that comes with the operating system like TOUCH for UNIX? &nbsp;</p> <p>You cannot download a program, run it from USB, or write a script... needs to be native capability.</p> <p>--Rob</p>
+    markmenz markmenz
+    19 May 2009 12:20 AM
+
+    <p>Use the MyKey Technology MFTRipper to all the NTFS dates and Times and ObjectID</p> <p>The free vedrsion &quot; MFTRipperBE&quot; will give you all the times and dates, the Professional version ($50.00) provides the times and dates to the milisecond, and decodees the ObjectID number into its time and date and MAC address and Sequence number.</p> <p>email me for the ree version</p> <p>mark@mykeytech.com</p>
+
+Leave a Comment
+
+    Name
+    Comment
+    Post
+
+    ? 2014 Microsoft Corporation.
+    Terms of Use
+    Trademarks
+    Privacy & Cookies
+    7.1.321.669
+

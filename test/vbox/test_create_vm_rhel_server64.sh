@@ -14,6 +14,6 @@ function main(){
 
 function create_pxecfg_rhel-server-6.4-x86_64() {
     echo call create_pxecfg_centos6 $1 $2
-    create_pxecfg_centos6 "$1" "$2"
+    create_pxecfg_centos6 "$1" "$2-"
 }
 main

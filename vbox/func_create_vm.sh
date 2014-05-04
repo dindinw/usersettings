@@ -20,7 +20,9 @@ function setup_vars()
         exit 1
     fi
 
-    HDD="${HOME}/VirtualBox VMs/${NAME}/main.vdi"
+    if [[ -z "${HDD}" ]]; then
+        HDD="${HOME}/VirtualBox VMs/${NAME}/main.vdi"
+    fi
     HDD_SWAP="${HOME}/VirtualBox VMs/${NAME}/swap.vdi"
     VBOX_FILE="${HOME}/VirtualBox VMs/${NAME}/${NAME}.vbox"
     VBOX_TFTP_DEFAULT="${HOME}/.VirtualBox/TFTP"
@@ -107,7 +109,8 @@ function create_vm_vbox(){
     VBoxManage createvm --name ${NAME} --ostype ${TYPE} --register
 
     # NIC Type includes :  [--nictype<1-N> Am79C970A|Am79C973|82540EM|82543GC|82545EM|virtio]
-    #     
+    # OS type get from commmand : VBoxMange list ostypes
+         
     VBoxManage modifyvm ${NAME} \
         --vram 12 \
         --accelerate3d off \
