@@ -36,7 +36,7 @@ function create_vm_vbox(){
     # 2.) storage muse IDE
          
     VBoxManage modifyvm ${NAME} \
-        --vram 12 \
+        --vram 24 \
         --accelerate3d off \
         --memory 512 \
         --usb off \
@@ -65,9 +65,9 @@ function create_vm_vbox(){
 
     VBoxManage storagectl ${NAME} \
         --name "Floppy" --add floppy
-    VBoxManage storageattach $NAME --storagectl "Floppy" --port 0 --device 0 --type fdd --medium "C:\Users\yidwu\Downloads\floppy01.img"
+    VBoxManage storageattach $NAME --storagectl "Floppy" --port 0 --device 0 --type fdd --medium "${FLOPPY}"
 
-    VBoxManage setextradata ${NAME} "VBoxInternal/Devices/pcbios/0/Config/BiosRom" "C:\Users\yidwu\Downloads\pcbios.bin"
+    VBoxManage setextradata ${NAME} "VBoxInternal/Devices/pcbios/0/Config/BiosRom" "${PCBIOS_BIN}"
 }
 
 # no need to do this, since winnt.sif is not work in the case
@@ -78,18 +78,94 @@ function create_unattened_floppy(){
     cp winnt.sif /mnt
 }
 
+# See FAQ 7 in http://reboot.pro/topic/15593-faqs-and-how-tos/ 
 function modify_vhd(){
-    devio 9999 /c/Users/yidwu/Downloads/VirtualXPVHD 1 1
-    imdisk -a -t proxy -o ip -f 127.0.0.1:9999 -m L: -S 512
-    #cp  ? /l/?/?
-    imdisk -d -m L:
+    start "${DEVIO}" shm:vhd1 "${VHD_FILE}"
+    #test -d vhd_mount || mkdir vhd_mount
+    imdisk -a -t proxy -o shm -f vhd1 -m vhd_mount
+
+    #cat ./vhd_mount/Sysprep/sysprep.inf
+
+cat <<EOF >./vhd_mount/Sysprep/sysprep.inf
+;SetupMgrTag
+[Unattended]
+    UnattendMode=FullUnattended
+    OemSkipEula=Yes
+    InstallFilesPath=C:\sysprep\i386
+    TargetPath=\WINDOWS
+    Repartition = Yes
+    UnattendSwitch = Yes
+    DriverSigningPolicy = Ignore
+    WaitForReboot = No
+
+[GuiUnattended]
+    AdminPassword="123456"
+    EncryptedAdminPassword=NO
+    OEMSkipRegional=1
+    TimeZone=210
+    OemSkipWelcome=1
+    AutoLogon=Yes
+    AutoLogonCount=1
+
+[UserData]
+    ProductKey=RB277-9WQ3D-W4CCX-3383C-7389Q
+    FullName="Windows XP Mode"
+    OrgName="test"
+    ComputerName="test2"
+
+
+[Identification]
+    JoinWorkgroup=WORKGROUP
+
+[Networking]
+    InstallDefaultComponents=Yes
+
+[Branding]
+    BrandIEUsingUnattended=Yes
+
+[Proxy]
+    Proxy_Enable=0
+    Use_Same_Proxy=0
+
+[GuiRunOnce]
+    ;Setup 
+    Command0="%systemdrive%\install.cmd"
+
+[sysprepcleanup]
+EOF
+
+cat <<EOF >./vhd_mount/install.cmd
+@echo off
+echo "Install vbox gusest addtions..."
+start /wait D:\VBoxWindowsAdditions.exe /S
+echo "... Done"
+echo "Stop Automatic Updates..."
+sc stop wuauserv
+sc config wuauserv start= disabled
+echo "Stop Security Center..."
+sc stop wscsvc
+sc config wscsvc start= disabled
+echo "... Done"
+echo "Reboot..."
+;; Best Performance
+set key=HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\
+:: Import 
+reg add %KEY% /v VisualFXSetting /t REG_DWORD /d 2 /f
+shutdown -r -t 0
+EOF
+    
+    imdisk -d -m vhd_mount
+    #test -d vhd_mount && rmdir vhd_mount
 }
 
 function extract_vhd(){
-    rm -f /c/Users/yidwu/Downloads/VirtualXPVHD
-    7z e /d/ISO/windows/WindowsXPMode_N_en-us.exe sources/xpm -o"C:\\Users\\yidwu\\Downloads\\" -y
-    7z e /c/Users/yidwu/Downloads/xpm VirtualXPVHD -o"C:\\Users\\yidwu\\Downloads\\" -y
-    rm -f /c/Users/yidwu/Downloads/xpm
+    test -f ${VHD_FILE} && echo "remove existed ${VHD_FILE}"; rm -f ${VHD_FILE};
+    echo "extract xpm from ${XPMODE_EXE_FILE}"
+    7z e ${XPMODE_EXE_FILE} sources/xpm -o$(to_win_path2 ${VHD_LOC}) -y 2>&1>NUL
+    echo "extract VirtualXPVHD from xpm"
+    7z e ${VHD_LOC}/xpm VirtualXPVHD -o$(to_win_path2 ${VHD_LOC}) -y 2>&1>NUL
+    echo "remove xpm file"
+    rm -f ${VHD_LOC}/xpm
 }
 
 function main(){
@@ -107,6 +183,43 @@ function clean(){
     VBoxManage unregistervm ${NAME} --delete
 }
 
+function best_performance(){
+
+cat <<EOF > ./best_perf.au3
+Opt("WinTitleMatchMode", 4)
+
+;Opens the System Properties window and chooses the 3rd tab
+;same as right click --> properties from My Computer.
+Run("control sysdm.cpl,,3")
+
+;click on the Performance Options "Settings" button
+
+WinWait("[CLASS:#32770; TITLE:Performance Options]")
+$hWin = WinGetHandle("[CLASS:#32770; TITLE:Performance Options]")
+WinActivate($hWin)
+WinWaitActive($hWin)
+
+;WinWaitActive("classname=#32770")
+;$handle = WinGetHandle("active")
+ControlClick("","","Button2")
+
+;click on "Adjust for best performance"
+WinWaitActive("classname=#32770")
+ControlClick("","","Button3")
+
+;click on "OK" button
+ControlClick("","","Button5")
+
+;click on "OK" button
+WinWaitActive("handle="&$handle)
+ControlClick("","","Button9")
+EOF
+
+gen_bp_cmd="$(to_win_path ${AUTOIT}) /in $(to_win_path $(pwd))\best_perf.au3 /out $(to_win_path $(pwd))\best_perf.exe"
+start cmd /k "$gen_bp_cmd && exit"
+
+}
+
 NAME=windowsxp-sp3-xp_mode
 TYPE=WindowsXP
 GUESTADDITIONS="../../vagrant-centos/isos/VBoxGuestAdditions_4.3.10.iso"
@@ -114,11 +227,37 @@ HDD="/c/Users/yidwu/Downloads/VirtualXPVHD"
 INSTALLER="/d/ISO/windows/WinXP-SP3.iso"
 KS_CFG="ks_centos.cfg"
 
+VHD_LOC="${HOME}/Downloads"
+VHD_FILE_NAME="VirtualXPVHD"
+VHD_FILE="${VHD_LOC}/${VHD_FILE_NAME}"
+
+XPMODE_EXE_LOC="/d/ISO/windows/"
+XPMODE_EXE_NAME="WindowsXPMode_N_en-us.exe"
+XPMODE_EXE_FILE="${XPMODE_EXE_LOC}/${XPMODE_EXE_NAME}"
+
+FLOPPY="${HOME}\Downloads\floppy01.img"
+
+PCBIOS_BIN="${HOME}\Downloads\pcbios.bin"
+
+DEVIO="${HOME}\Downloads\devio"
+
+AUTOIT="${HOME}\Downloads\autoit-v3\install\Aut2Exe\Aut2exe"
+
+
 if [[ -z "$1" ]]; then
+    clean
+    extract_vhd
+    modify_vhd
+    main
+elif [[ "$1" == "main" ]]; then
     main
 elif [[ "$1" == "clean" ]]; then
     clean
 elif [[ "$1" == "extract" ]]; then
     extract_vhd
+elif [[ "$1" == "modvhd" ]]; then
+    modify_vhd
+elif [[ "$1" == "bp" ]]; then
+    best_performance
 fi
 
