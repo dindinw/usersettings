@@ -146,11 +146,65 @@ echo "Stop Security Center..."
 sc stop wscsvc
 sc config wscsvc start= disabled
 echo "... Done"
+
+@rem ---------------------------------------------
+@rem Best Performance
+@rem ---------------------------------------------
+
+@rem   [HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\VisualFXSetting]
+@rem   best performance
+@rem   0 = Let Windows choose what's best for my computer
+@rem   1 = Adjust for best appearance
+@rem   2 = Adjust for best performance
+@rem   3 = Custom 
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects /v VisualFXSetting /t REG_DWORD /d 2 /f
+
+@rem   [HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager]
+@rem   Use visual styles on windows and buttons (0=off 1=on) 
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v ThemeActive /t REG_SZ /d 0 /f
+reg delete HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v LoadedBefore /f
+reg delete HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v LastUserLangID /f
+reg delete HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v DllName /f
+reg delete HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v SizeName /f
+
+@rem   [HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+@rem   Use common tasks in folders (0=off 1=on) 
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v WebView /t REG_DWORD /d 0 /f 
+@rem   Show translucent selection rectangle (0=off 1=on)
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v ListviewAlphaSelect /t REG_DWORD /d 0 /f
+@rem   Use drop shadows for icon labels on the desktop (0=off 1=on)
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v ListviewShadow /t REG_DWORD /d 0 /f
+@rem   Use a background image for each folder type (0=off 1=on)
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v ListviewWatermark /t REG_DWORD /d 0 /f
+@rem   Slide taskbar buttons (0=off 1=on)
+reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v TaskbarAnimations /t REG_DWORD /d 0 /f
+
+@rem   [HKCU\Control Panel\Desktop\WindowMetrics]
+@rem   Animate windows when minimizing and maximizing (0=off 1=on)
+reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 0 /f
+
+@rem   [HKCU\Control Panel\Desktop]
+@rem   Show window contents while dragging (0=off 1=on)
+reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d 0 /f
+@rem   Smooth edges of screen fonts (0=off 2=on)
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d 0 /f
+
+@rem   Smooth scroll list boxes
+@rem   Slide open combo boxes
+@rem   Fade or slide menus into view
+@rem   Show shadows under mouse pointer
+@rem   Fade or slide tooltips into view
+@rem   Fade out menu items after clicking
+@rem   Show shadows under menus
+@rem   (All off = 90,12,01,80   All on = 9e,3e,05,80)
+reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 90120180 /f
+
+@rem   [HKCU\Control Panel\Appearance]
+
+reg add "HKCU\Control Panel\Appearance" /v Current /t REG_SZ /d "Windows Standard" /f
+reg add "HKCU\Control Panel\Appearance" /v NewCurrent /t REG_SZ /d "Windows Standard" /f
+
 echo "Reboot..."
-;; Best Performance
-set key=HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\
-:: Import 
-reg add %KEY% /v VisualFXSetting /t REG_DWORD /d 2 /f
 shutdown -r -t 0
 EOF
     
@@ -186,33 +240,80 @@ function clean(){
 function best_performance(){
 
 cat <<EOF > ./best_perf.au3
+;#NoTrayIcon
+#include <Constants.au3>
+#include <GuiConstants.au3>
+#include <GuiButton.au3>
 Opt("WinTitleMatchMode", 4)
 
-;Opens the System Properties window and chooses the 3rd tab
-;same as right click --> properties from My Computer.
+;Opens the System Properties window and chooses the 4rd tab
+;Note, starts from 0, the 3 is the "Advanced" tab
 Run("control sysdm.cpl,,3")
 
 ;click on the Performance Options "Settings" button
-
-WinWait("[CLASS:#32770; TITLE:Performance Options]")
-$hWin = WinGetHandle("[CLASS:#32770; TITLE:Performance Options]")
-WinActivate($hWin)
-WinWaitActive($hWin)
-
-;WinWaitActive("classname=#32770")
-;$handle = WinGetHandle("active")
+if WinWaitActive("ClassName=#32770","",60)=0 then
+    LogError("Could not attach to dialog")
+    exit
+endif
 ControlClick("","","Button2")
 
 ;click on "Adjust for best performance"
-WinWaitActive("classname=#32770")
+if WinWait("[CLASS:#32770; TITLE:Performance Options]","",60)=0 then
+    LogError("Could not attach to dialog")
+    exit
+endif
 ControlClick("","","Button3")
 
-;click on "OK" button
+;click on "OK" button under Performance Options tab
 ControlClick("","","Button5")
 
-;click on "OK" button
-WinWaitActive("handle="&$handle)
+;click on "OK" button under System Properties page
+if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",60)=0 then
+    LogError("Could not attach to dialog")
+    exit
+endif
 ControlClick("","","Button9")
+
+; Open "System Restore" tab
+Run("control sysdm.cpl,,4")
+; Turn off System Restore
+if WinWaitActive("ClassName=#32770","",60)=0 then
+    LogError("Could not attach to dialog")
+    exit
+endif
+$hWin=WinGetHandle("[CLASS:#32770; TITLE:System Properties]")
+$hCheckBox = ControlGetHandle($hWin, "", "[CLASS:Button; INSTANCE:1]")
+
+;For Debug 
+MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "$hWin ="&$hWin & @CRLF & "$hCheckBox ="&$hCheckBox & @CRLF & "checked="&_GUICtrlButton_GetCheck($hCheckBox))
+If Not _GUICtrlButton_GetCheck($hCheckBox) = $GUI_CHECKED Then
+    MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "check box not checked, try to do turn off system restore")
+    if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",1)=0 then
+        LogError("Could not attach to dialog")
+        exit
+    endif
+    ControlClick("","","Button1")
+    ;click on "OK" button under System Properties page
+    if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",60)=0 then
+        LogError("Could not attach to dialog")
+        exit
+    endif
+    ControlClick("","","Button5")
+    
+    ;click on "Yes" button under System Restore Confrom diag
+    if WinWaitActive("[CLASS:#32770; TITLE:System Restore]","",1)=0 then
+        LogError("Could not attach to dialog")
+        exit
+    endif
+    ControlClick("","","Button1")
+endif
+
+;click on "OK" button under System Properties page
+if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",60)=0 then
+    LogError("Could not attach to dialog")
+    exit
+endif
+ControlClick("","","Button5")
 EOF
 
 gen_bp_cmd="$(to_win_path ${AUTOIT}) /in $(to_win_path $(pwd))\best_perf.au3 /out $(to_win_path $(pwd))\best_perf.exe"
