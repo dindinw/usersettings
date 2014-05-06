@@ -207,7 +207,7 @@ reg add "HKCU\Control Panel\Appearance" /v NewCurrent /t REG_SZ /d "Windows Stan
 echo "Reboot..."
 shutdown -r -t 0
 EOF
-    
+    cp 
     imdisk -d -m vhd_mount
     #test -d vhd_mount && rmdir vhd_mount
 }
@@ -237,9 +237,9 @@ function clean(){
     VBoxManage unregistervm ${NAME} --delete
 }
 
-function best_performance(){
+function gen_tweak_exe(){
 
-cat <<EOF > ./best_perf.au3
+cat <<"EOF" > ./tweak_xp.au3
 ;#NoTrayIcon
 #include <Constants.au3>
 #include <GuiConstants.au3>
@@ -285,9 +285,9 @@ $hWin=WinGetHandle("[CLASS:#32770; TITLE:System Properties]")
 $hCheckBox = ControlGetHandle($hWin, "", "[CLASS:Button; INSTANCE:1]")
 
 ;For Debug 
-MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "$hWin ="&$hWin & @CRLF & "$hCheckBox ="&$hCheckBox & @CRLF & "checked="&_GUICtrlButton_GetCheck($hCheckBox))
+;MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "$hWin ="&$hWin & @CRLF & "$hCheckBox ="&$hCheckBox & @CRLF & "checked="&_GUICtrlButton_GetCheck($hCheckBox))
 If Not _GUICtrlButton_GetCheck($hCheckBox) = $GUI_CHECKED Then
-    MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "check box not checked, try to do turn off system restore")
+    ;MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "check box not checked, try to do turn off system restore")
     if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",1)=0 then
         LogError("Could not attach to dialog")
         exit
@@ -314,11 +314,19 @@ if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",60)=0 then
     exit
 endif
 ControlClick("","","Button5")
+
 EOF
 
-gen_bp_cmd="$(to_win_path ${AUTOIT}) /in $(to_win_path $(pwd))\best_perf.au3 /out $(to_win_path $(pwd))\best_perf.exe"
-start cmd /k "$gen_bp_cmd && exit"
+    au3_to_exe "tweak_xp.au3" "tweak_xp.exe"
+}
 
+function au3_to_exe(){
+    local au3_file="$1"
+    local exe_file="$2"
+    #echo ${au3_file} ${exe_file}
+    gen_tweak_cmd="$(to_win_path ${AUTOIT}) /in $(to_win_path $(pwd))\\$au3_file /out $(to_win_path $(pwd))\\$exe_file"
+    #echo "$gen_tweak_cmd"
+    start cmd /k "$gen_tweak_cmd && exit"
 }
 
 NAME=windowsxp-sp3-xp_mode
@@ -358,7 +366,7 @@ elif [[ "$1" == "extract" ]]; then
     extract_vhd
 elif [[ "$1" == "modvhd" ]]; then
     modify_vhd
-elif [[ "$1" == "bp" ]]; then
-    best_performance
+elif [[ "$1" == "genexe" ]]; then
+    gen_tweak_exe
 fi
 
