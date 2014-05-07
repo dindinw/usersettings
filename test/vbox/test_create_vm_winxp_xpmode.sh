@@ -242,81 +242,191 @@ function gen_tweak_exe(){
 cat <<"EOF" > ./tweak_xp.au3
 ;#NoTrayIcon
 #include <Constants.au3>
+#include <Debug.au3>
 #include <GuiConstants.au3>
 #include <GuiButton.au3>
+#include <GuiListView.au3>
 Opt("WinTitleMatchMode", 4)
 
+Const $sTitleMain = "[CLASS:#32770; TITLE:System Properties]"
+Const $sTitlePerf = "[CLASS:#32770; TITLE:Performance Options]"
+Const $sTitleRstr = "[CLASS:#32770; TITLE:System Restore]"
+Const $sTitleRmtAsst = "[CLASS:#32770; TITLE:Remote Assistance Settings]"
+
+Const $sSysdmCplAdv = "control sysdm.cpl,,3"
+Const $sSysdmCplRstr = "control sysdm.cpl,,4"
+Const $sSysdmCplAtUpd = "control sysdm.cpl,,5"
+Const $sSysdmCplRmot = "control sysdm.cpl,,6"
+
+Global $hWinMain ; handle for main
+
+;_DebugSetup("Debug Console", True) ; start displaying debug environment
+
+
+;=======================================================================
+; Wait for Act
+;=======================================================================
+Func WaitAct ( $vTitle )
+    Local  $iReturn = WinWaitActive($vTitle)
+    if $iReturn=0 then
+        _DebugOut("Could not attach to dialog"&$vTitle);
+    exit
+    endif
+    Return $iReturn
+EndFunc   ;==>WaitAct
+
+Func Button_Checked ($hMain, $sButtonTitle)
+    Local $hButtionCheckBox = ControlGetHandle($hMain, "", $sButtonTitle)
+    _DebugOut("Get Handle checkbox "&$hButtionCheckBox)
+    _DebugOut("_GUICtrlButton_GetCheck = "&_GUICtrlButton_GetCheck($hButtionCheckBox))
+    _DebugOut("_GUICtrlButton_GetState = "&_GUICtrlButton_GetState($hButtionCheckBox))
+    _DebugOut("_GUICtrlButton_GetText = "&_GUICtrlButton_GetText($hButtionCheckBox))
+    _DebugOut("_GUICtrlListView_GetItemChecked = "&_GUICtrlListView_GetItemChecked($hButtionCheckBox, 0))
+    _DebugOut("_GUICtrlListView_GetItemChecked = "&_GUICtrlListView_GetItemChecked($hButtionCheckBox, 1))
+    _DebugOut("_GUICtrlListView_GetGroupInfo = "&_GUICtrlListView_GetGroupInfo($hButtionCheckBox, 0))
+    _DebugOut("_GUICtrlListView_GetGroupInfo = "&_GUICtrlListView_GetGroupInfo($hButtionCheckBox, 1))
+
+    if _GUICtrlButton_GetCheck($hButtionCheckBox) = $GUI_CHECKED then
+        return TRUE
+    else
+        return FALSE
+    endif
+EndFunc ;==>Buttion_Checked
+
+;=======================================================================
+; Adjust For Best Performance
+;=======================================================================
 ;Opens the System Properties window and chooses the 4rd tab
 ;Note, starts from 0, the 3 is the "Advanced" tab
-Run("control sysdm.cpl,,3")
 
-;click on the Performance Options "Settings" button
-if WinWaitActive("ClassName=#32770","",60)=0 then
-    LogError("Could not attach to dialog")
-    exit
-endif
-ControlClick("","","Button2")
+Func Apply_BestPerformance()
+    Run($sSysdmCplAdv)
+    _DebugOut("----------------------------------------")
+    _DebugOut("Run "&$sSysdmCplAdv)
 
-;click on "Adjust for best performance"
-if WinWait("[CLASS:#32770; TITLE:Performance Options]","",60)=0 then
-    LogError("Could not attach to dialog")
-    exit
-endif
-ControlClick("","","Button3")
+    WaitAct($sTitleMain)
 
-;click on "OK" button under Performance Options tab
-ControlClick("","","Button5")
+    Send("!s") ;Performance -> "Settings" 
+    _DebugOut("send Alt-S")
 
-;click on "OK" button under System Properties page
-if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",60)=0 then
-    LogError("Could not attach to dialog")
-    exit
-endif
-ControlClick("","","Button9")
 
-; Open "System Restore" tab
-Run("control sysdm.cpl,,4")
-; Turn off System Restore
-if WinWaitActive("ClassName=#32770","",60)=0 then
-    LogError("Could not attach to dialog")
-    exit
-endif
-$hWin=WinGetHandle("[CLASS:#32770; TITLE:System Properties]")
-$hCheckBox = ControlGetHandle($hWin, "", "[CLASS:Button; INSTANCE:1]")
+    WaitAct($sTitlePerf)
+    Send("!p") ;"Adjust for best performance"
+    _DebugOut("send Alt-P")
 
-;For Debug 
-;MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "$hWin ="&$hWin & @CRLF & "$hCheckBox ="&$hCheckBox & @CRLF & "checked="&_GUICtrlButton_GetCheck($hCheckBox))
-If Not _GUICtrlButton_GetCheck($hCheckBox) = $GUI_CHECKED Then
-    ;MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "check box not checked, try to do turn off system restore")
-    if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",1)=0 then
-        LogError("Could not attach to dialog")
-        exit
-    endif
-    ControlClick("","","Button1")
+    ;click on "OK" button under Performance Options tab
+    WaitAct($sTitlePerf)
+    Send("{ENTER}") 
+    _DebugOut("send ENTER -> OK")
+    ;ControlClick("","","Button5")
+    ;_DebugOut("click Button5 -> OK")
+
     ;click on "OK" button under System Properties page
-    if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",60)=0 then
-        LogError("Could not attach to dialog")
-        exit
-    endif
-    ControlClick("","","Button5")
-    
-    ;click on "Yes" button under System Restore Confrom diag
-    if WinWaitActive("[CLASS:#32770; TITLE:System Restore]","",1)=0 then
-        LogError("Could not attach to dialog")
-        exit
-    endif
-    ControlClick("","","Button1")
-endif
+    WaitAct($sTitleMain)
+    ControlClick("","","Button9")
+    _DebugOut("click Button9 -> OK -> EXIT")
+EndFunc 
 
-;click on "OK" button under System Properties page
-if WinWaitActive("[CLASS:#32770; TITLE:System Properties]","",60)=0 then
-    LogError("Could not attach to dialog")
-    exit
-endif
-ControlClick("","","Button5")
+;=======================================================================
+; Trun Off System Restore
+;=======================================================================
+Func Disable_SystemRestore()
+    Run($sSysdmCplRstr); Open "System Restore" tab
+    _DebugOut("----------------------------------------")
+    _DebugOut("Run "&$sSysdmCplRstr)
+
+    WaitAct($sTitleMain)
+    $hWinMain=WinGetHandle($sTitleMain)
+    _DebugOut("Get Handle main "&$hWinMain)
+
+    $hCheckBox = ControlGetHandle($hWinMain, "", "[CLASS:Button; INSTANCE:1]")
+    _DebugOut("Get Handle checkbox "&$hCheckBox)
+
+    If Not _GUICtrlButton_GetCheck($hCheckBox) = $GUI_CHECKED Then
+        ;MsgBox($MB_SYSTEMMODAL, "AutoIt Debug", "check box not checked, try to do turn off system restore")
+        WaitAct($sTitleMain)
+        ControlClick("","","Button1")
+        _DebugOut("click Button1 -> Check the turn off system restore")
+        
+        WaitAct($sTitleMain)
+        ControlClick("","","Button5");click on "OK" button under System Properties page
+        _DebugOut("click Button5 -> OK ")
+
+        WaitAct($sTitleRstr)
+        ControlClick("","","Button1");click on "Yes" button under System Restore Confrom diag
+        _DebugOut("click Button1 -> YES to comfirm")
+
+    endif
+    WaitAct($sTitleMain)
+    ControlClick("","","Button5");click on "OK" button under System Properties page
+    _DebugOut("click Button5 -> OK -> EXIT")
+EndFunc 
+
+;=======================================================================
+; Trun Off Auto Update
+;=======================================================================
+Func Disable_AutoUpdate()
+    Run($sSysdmCplAtUpd)
+    _DebugOut("----------------------------------------")
+    _DebugOut("Run "&$sSysdmCplAtUpd)
+    WaitAct($sTitleMain)
+    Send("!T")
+    _DebugOut("send Alt-T -> Trun off Auto update")
+    WaitAct($sTitleMain)
+    Send("{ENTER}")
+    _DebugOut("send ENTER -> OK -> EXIT")
+EndFunc 
+
+;=======================================================================
+; Disable Remote Assistance 
+;=======================================================================
+Func Disable_RemoteAssist()
+    Run($sSysdmCplRmot)
+    _DebugOut("----------------------------------------")
+    _DebugOut("Run "&$sSysdmCplRmot)
+    WaitAct($sTitleMain)
+    $hWinMain=WinGetHandle($sTitleMain)
+    _DebugOut("Get Handle main "&$hWinMain)
+
+    ;-----------------------------------------------------------------
+    ;Note Button_checked():
+    ;  Button_checked() function not work with the grouped checkbox button 
+    ;  in remote assistance selection. I don't how to do this.
+    ;Workaround:
+    ;  use the tick of send alt-v to open advanced remote assit setting 
+    ;  window first and test if the setting window is open, if open, means 
+    ;  the box checked, otherwise it unchecked.
+    ;-----------------------------------------------------------------
+    if not Button_Checked($hWinMain,"[CLASS:Button; INSTANCE:5]") then
+        WaitAct($sTitleMain)
+    ;    Send("!R")
+    ;    _DebugOut("send ALT-R first -> Don't know if it checked")
+        WaitAct($sTitleMain)
+        Send("!v")
+        _DebugOut("send ALT-v -> try to open remove assist setting")
+        if WinWaitActive($sTitleRmtAsst,"",1) = 0 then
+            _DebugOut("advanced setting window not opened -> the remote assist is disabled by default")
+        else
+            _DebugOut("advanced setting window opened")
+            ControlClick("","","Button2") ; cancle 
+            _DebugOut("click Button2-> cancle -> to exit remote assist advanced setting window")
+            WaitAct($sTitleMain)
+            Send("!R") ; again
+            _DebugOut("send ALT-R -> unchecked -> to disable remote assist")
+        endif
+    endif
+
+    WaitAct($sTitleMain)
+    ControlClick("","","Button7")
+    _DebugOut("click Button7 -> OK -> EXIT")
+EndFunc
+
+Apply_BestPerformance()
+Disable_SystemRestore()
+Disable_AutoUpdate()
+Disable_RemoteAssist()
 
 EOF
-
     au3_to_exe "tweak_xp.au3" "tweak_xp.exe"
 }
 
@@ -324,7 +434,7 @@ function au3_to_exe(){
     local au3_file="$1"
     local exe_file="$2"
     #echo ${au3_file} ${exe_file}
-    gen_tweak_cmd="$(to_win_path ${AUTOIT}) /in $(to_win_path $(pwd))\\$au3_file /out $(to_win_path $(pwd))\\$exe_file"
+    gen_tweak_cmd="$(to_win_path ${AUTOIT}) /in $(to_win_path $(pwd))\\$au3_file /out $(to_win_path $(pwd))\\$exe_file /comp 4 /pack"
     #echo "$gen_tweak_cmd"
     start cmd /k "$gen_tweak_cmd && exit"
 }
