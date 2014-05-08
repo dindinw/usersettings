@@ -246,21 +246,27 @@ cat <<"EOF" > ./tweak_xp.au3
 #include <GuiConstants.au3>
 #include <GuiButton.au3>
 #include <GuiListView.au3>
+#include <WinAPI.au3>
+
 Opt("WinTitleMatchMode", 4)
 
 Const $sTitleMain = "[CLASS:#32770; TITLE:System Properties]"
 Const $sTitlePerf = "[CLASS:#32770; TITLE:Performance Options]"
 Const $sTitleRstr = "[CLASS:#32770; TITLE:System Restore]"
 Const $sTitleRmtAsst = "[CLASS:#32770; TITLE:Remote Assistance Settings]"
+Const $sTitleTaskBar = "[CLASS:#32770; TITLE:Taskbar and Start Menu Properties]"
 
 Const $sSysdmCplAdv = "control sysdm.cpl,,3"
 Const $sSysdmCplRstr = "control sysdm.cpl,,4"
 Const $sSysdmCplAtUpd = "control sysdm.cpl,,5"
 Const $sSysdmCplRmot = "control sysdm.cpl,,6"
 
+Const $sDll32Folder ="rundll32.exe shell32.dll,Options_RunDLL 0"
+Const $sDll32TaskBar ="rundll32.exe shell32.dll,Options_RunDLL 1"
+
 Global $hWinMain ; handle for main
 
-;_DebugSetup("Debug Console", True) ; start displaying debug environment
+_DebugSetup("Debug Console", True) ; start displaying debug environment
 
 
 ;=======================================================================
@@ -281,10 +287,15 @@ Func Button_Checked ($hMain, $sButtonTitle)
     _DebugOut("_GUICtrlButton_GetCheck = "&_GUICtrlButton_GetCheck($hButtionCheckBox))
     _DebugOut("_GUICtrlButton_GetState = "&_GUICtrlButton_GetState($hButtionCheckBox))
     _DebugOut("_GUICtrlButton_GetText = "&_GUICtrlButton_GetText($hButtionCheckBox))
+    _DebugOut("_GUICtrlListView_GetItemCount = "&_GUICtrlListView_GetItemCount($hButtionCheckBox))
     _DebugOut("_GUICtrlListView_GetItemChecked = "&_GUICtrlListView_GetItemChecked($hButtionCheckBox, 0))
     _DebugOut("_GUICtrlListView_GetItemChecked = "&_GUICtrlListView_GetItemChecked($hButtionCheckBox, 1))
     _DebugOut("_GUICtrlListView_GetGroupInfo = "&_GUICtrlListView_GetGroupInfo($hButtionCheckBox, 0))
     _DebugOut("_GUICtrlListView_GetGroupInfo = "&_GUICtrlListView_GetGroupInfo($hButtionCheckBox, 1))
+
+Local $hTablCountrol
+    local $iCount = ControlListView("[CLASS:#32770; TITLE:Taskbar and Start Menu Properties]","","[CLASS:SysTabControl32; INSTANCE:1]","GetItemCount")
+    _DebugOut("ControlListView -> GetItemCount = "&$iCount)
 
     if _GUICtrlButton_GetCheck($hButtionCheckBox) = $GUI_CHECKED then
         return TRUE
@@ -306,7 +317,7 @@ Func Apply_BestPerformance()
 
     WaitAct($sTitleMain)
 
-    Send("!s") ;Performance -> "Settings" 
+    Send("!s") ;Performance -> "Settings"
     _DebugOut("send Alt-S")
 
 
@@ -316,7 +327,7 @@ Func Apply_BestPerformance()
 
     ;click on "OK" button under Performance Options tab
     WaitAct($sTitlePerf)
-    Send("{ENTER}") 
+    Send("{ENTER}")
     _DebugOut("send ENTER -> OK")
     ;ControlClick("","","Button5")
     ;_DebugOut("click Button5 -> OK")
@@ -325,7 +336,7 @@ Func Apply_BestPerformance()
     WaitAct($sTitleMain)
     ControlClick("","","Button9")
     _DebugOut("click Button9 -> OK -> EXIT")
-EndFunc 
+EndFunc
 
 ;=======================================================================
 ; Trun Off System Restore
@@ -347,7 +358,7 @@ Func Disable_SystemRestore()
         WaitAct($sTitleMain)
         ControlClick("","","Button1")
         _DebugOut("click Button1 -> Check the turn off system restore")
-        
+
         WaitAct($sTitleMain)
         ControlClick("","","Button5");click on "OK" button under System Properties page
         _DebugOut("click Button5 -> OK ")
@@ -360,7 +371,7 @@ Func Disable_SystemRestore()
     WaitAct($sTitleMain)
     ControlClick("","","Button5");click on "OK" button under System Properties page
     _DebugOut("click Button5 -> OK -> EXIT")
-EndFunc 
+EndFunc
 
 ;=======================================================================
 ; Trun Off Auto Update
@@ -375,10 +386,10 @@ Func Disable_AutoUpdate()
     WaitAct($sTitleMain)
     Send("{ENTER}")
     _DebugOut("send ENTER -> OK -> EXIT")
-EndFunc 
+EndFunc
 
 ;=======================================================================
-; Disable Remote Assistance 
+; Disable Remote Assistance
 ;=======================================================================
 Func Disable_RemoteAssist()
     Run($sSysdmCplRmot)
@@ -390,12 +401,17 @@ Func Disable_RemoteAssist()
 
     ;-----------------------------------------------------------------
     ;Note Button_checked():
-    ;  Button_checked() function not work with the grouped checkbox button 
+    ;  Button_checked() function not work with the grouped checkbox button
     ;  in remote assistance selection. I don't how to do this.
     ;Workaround:
-    ;  use the tick of send alt-v to open advanced remote assit setting 
-    ;  window first and test if the setting window is open, if open, means 
+    ;  use the tick of send alt-v to open advanced remote assit setting
+    ;  window first and test if the setting window is open, if open, means
     ;  the box checked, otherwise it unchecked.
+    ;TODO:
+    ;  look at $BS_GROUPBOX in <ButtonConstants.au3>
+    ;  https://opensource.ncsa.illinois.edu/stash/projects/POL/repos/menu-mining/browse/menu-mining/autoit-scripts/ExtractControlsFunc.au3
+    ;  if got time
+    ;  
     ;-----------------------------------------------------------------
     if not Button_Checked($hWinMain,"[CLASS:Button; INSTANCE:5]") then
         WaitAct($sTitleMain)
@@ -408,7 +424,7 @@ Func Disable_RemoteAssist()
             _DebugOut("advanced setting window not opened -> the remote assist is disabled by default")
         else
             _DebugOut("advanced setting window opened")
-            ControlClick("","","Button2") ; cancle 
+            ControlClick("","","Button2") ; cancle
             _DebugOut("click Button2-> cancle -> to exit remote assist advanced setting window")
             WaitAct($sTitleMain)
             Send("!R") ; again
@@ -421,10 +437,79 @@ Func Disable_RemoteAssist()
     _DebugOut("click Button7 -> OK -> EXIT")
 EndFunc
 
-Apply_BestPerformance()
-Disable_SystemRestore()
-Disable_AutoUpdate()
-Disable_RemoteAssist()
+
+;Apply_BestPerformance()
+;Disable_SystemRestore()
+;Disable_AutoUpdate()
+;Disable_RemoteAssist()
+
+
+;=======================================================================
+; Task Bar and Start up 
+; NOTE:
+; Still can't let button ctrl work as a list of GroupBox or ListView, 
+; so dn't use it, instead by using _QuickLaunch_SetState() method
+;=======================================================================
+Func Set_TaskBar()
+    RUN($sDll32TaskBar)
+    _DebugOut("----------------------------------------")
+    _DebugOut("Run "&$sDll32TaskBar)
+    WaitAct($sTitleTaskBar)
+    $hWinMain=WinGetHandle($sTitleTaskBar)
+    _DebugOut("Get Handle main "&$hWinMain)
+
+    $hBigButton=ControlGetHandle($hWinMain, "", "[CLASS:Button; INSTANCE:9]")
+    $iLong = _WinAPI_GetWindowLong($hBigButton, $GWL_STYLE)
+    _DebugOut("Get Handle big button "&$hBigButton)
+    _DebugOut("Get Handle big button iLong "&$iLong)
+    Button_Checked($hWinMain,"[CLASS:Button; INSTANCE:9]")
+    send("!Q") ; send alt-Q to click "show quick lanuch", the problem is don't know if checked or not.
+    Button_Checked($hWinMain,"[CLASS:Button; INSTANCE:9]")
+EndFunc
+;Set_TaskBar()
+
+;===============================================================================
+; From : http://www.autoitscript.com/forum/topic/95846-show-quick-launch/
+; Function Name:    QuickLaunch_SetState
+; Description:      Enable/disable the quick launch toolbar
+; Parameter(s):     $fState - Specifies whether to enable or disable the quick launch toolbar.
+;                       True (1) = toolbar is enabled
+;                       False (0) = toolbar is disabled
+; Requirement(s):   Windows 2000 or XP
+; Return Value(s):  Success - Return value from _SendMessage
+;                   Failure - @error is set
+;                   @error  - 1 = Invalid $fState, 2 = Unable to get handle for Shell_TrayWnd
+; Author(s):        Bob Anthony (big_daddy)
+;
+;===============================================================================
+;
+Func QuickLaunch_SetState($fState)
+    ; Already disclared in <WindowsConstants.au3>
+    ;Const $WM_USER = 0X400
+    ;See http://msdn.microsoft.com/en-us/library/windows/desktop/ms644931(v=vs.85).aspx
+    ;social.technet./Forums/en-US/c56caaff-90c0-4755-9ce0-29400b43b89c/enable-quick-launch-toolbar-powershell
+    ;BTW, where is the document for the migic code 237?, anyway it works on XP
+    Const $WMTRAY_TOGGLEQL = ($WM_USER + 237)
+
+    If $fState <> 0 And $fState <> 1 Then Return SetError(1, 0, 0)
+
+    $hTrayWnd = WinGetHandle("[CLASS:Shell_TrayWnd]")
+    If @error Then Return SetError(2, 0, 0)
+
+    Return _SendMessage($hTrayWnd, $WMTRAY_TOGGLEQL, 0, $fState)
+EndFunc   ;==>_QuickLaunch_SetState
+
+;Func _QuickLaunch_AutoSize()
+;    Local $iIndex = 0
+;   Local $hTaskBar = _WinAPI_FindWindow("Shell_TrayWnd", "")
+;   Local $hRebar = ControlGetHandle($hTaskBar, "", "ReBarWindow321")
+;    _GUICtrlRebar_MinimizeBand($hRebar, $iIndex)
+;    _GUICtrlRebar_MaximizeBand($hRebar, $iIndex, True)
+;EndFunc   ;==>_QuickLaunch_AutoSize
+
+
+QuickLaunch_SetState(True)
+;_QuickLaunch_AutoSize()
 
 EOF
     au3_to_exe "tweak_xp.au3" "tweak_xp.exe"
