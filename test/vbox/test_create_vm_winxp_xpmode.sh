@@ -241,11 +241,16 @@ function gen_tweak_exe(){
 
 cat <<"EOF" > ./tweak_xp.au3
 ;#NoTrayIcon
+
+#include-once
+
 #include <Constants.au3>
 #include <Debug.au3>
 #include <GuiConstants.au3>
 #include <GuiButton.au3>
 #include <GuiListView.au3>
+#include <GuiTreeView.au3>
+#include <GuiTab.au3>
 #include <WinAPI.au3>
 
 Opt("WinTitleMatchMode", 4)
@@ -254,15 +259,11 @@ Const $sTitleMain = "[CLASS:#32770; TITLE:System Properties]"
 Const $sTitlePerf = "[CLASS:#32770; TITLE:Performance Options]"
 Const $sTitleRstr = "[CLASS:#32770; TITLE:System Restore]"
 Const $sTitleRmtAsst = "[CLASS:#32770; TITLE:Remote Assistance Settings]"
-Const $sTitleTaskBar = "[CLASS:#32770; TITLE:Taskbar and Start Menu Properties]"
 
 Const $sSysdmCplAdv = "control sysdm.cpl,,3"
 Const $sSysdmCplRstr = "control sysdm.cpl,,4"
 Const $sSysdmCplAtUpd = "control sysdm.cpl,,5"
 Const $sSysdmCplRmot = "control sysdm.cpl,,6"
-
-Const $sDll32Folder ="rundll32.exe shell32.dll,Options_RunDLL 0"
-Const $sDll32TaskBar ="rundll32.exe shell32.dll,Options_RunDLL 1"
 
 Global $hWinMain ; handle for main
 
@@ -284,6 +285,7 @@ EndFunc   ;==>WaitAct
 Func Button_Checked ($hMain, $sButtonTitle)
     Local $hButtionCheckBox = ControlGetHandle($hMain, "", $sButtonTitle)
     _DebugOut("Get Handle checkbox "&$hButtionCheckBox)
+    #comments-start
     _DebugOut("_GUICtrlButton_GetCheck = "&_GUICtrlButton_GetCheck($hButtionCheckBox))
     _DebugOut("_GUICtrlButton_GetState = "&_GUICtrlButton_GetState($hButtionCheckBox))
     _DebugOut("_GUICtrlButton_GetText = "&_GUICtrlButton_GetText($hButtionCheckBox))
@@ -293,9 +295,10 @@ Func Button_Checked ($hMain, $sButtonTitle)
     _DebugOut("_GUICtrlListView_GetGroupInfo = "&_GUICtrlListView_GetGroupInfo($hButtionCheckBox, 0))
     _DebugOut("_GUICtrlListView_GetGroupInfo = "&_GUICtrlListView_GetGroupInfo($hButtionCheckBox, 1))
 
-Local $hTablCountrol
+    Local $hTablCountrol
     local $iCount = ControlListView("[CLASS:#32770; TITLE:Taskbar and Start Menu Properties]","","[CLASS:SysTabControl32; INSTANCE:1]","GetItemCount")
     _DebugOut("ControlListView -> GetItemCount = "&$iCount)
+    #comments-end
 
     if _GUICtrlButton_GetCheck($hButtionCheckBox) = $GUI_CHECKED then
         return TRUE
@@ -437,11 +440,10 @@ Func Disable_RemoteAssist()
     _DebugOut("click Button7 -> OK -> EXIT")
 EndFunc
 
-
-;Apply_BestPerformance()
-;Disable_SystemRestore()
-;Disable_AutoUpdate()
-;Disable_RemoteAssist()
+Apply_BestPerformance()
+Disable_SystemRestore()
+Disable_AutoUpdate()
+Disable_RemoteAssist()
 
 
 ;=======================================================================
@@ -451,6 +453,10 @@ EndFunc
 ; so dn't use it, instead by using _QuickLaunch_SetState() method
 ;=======================================================================
 Func Set_TaskBar()
+    
+    Const $sDll32TaskBar ="rundll32.exe shell32.dll,Options_RunDLL 1"
+    Const $sTitleTaskBar = "[CLASS:#32770; TITLE:Taskbar and Start Menu Properties]"
+
     RUN($sDll32TaskBar)
     _DebugOut("----------------------------------------")
     _DebugOut("Run "&$sDll32TaskBar)
@@ -469,7 +475,7 @@ EndFunc
 ;Set_TaskBar()
 
 ;===============================================================================
-; From : http://www.autoitscript.com/forum/topic/95846-show-quick-launch/
+; Copy From : http://www.autoitscript.com/forum/topic/95846-show-quick-launch/
 ; Function Name:    QuickLaunch_SetState
 ; Description:      Enable/disable the quick launch toolbar
 ; Parameter(s):     $fState - Specifies whether to enable or disable the quick launch toolbar.
@@ -510,6 +516,103 @@ EndFunc   ;==>_QuickLaunch_SetState
 
 QuickLaunch_SetState(True)
 ;_QuickLaunch_AutoSize()
+
+
+;=======================================================================
+; Select Tab
+;=======================================================================
+
+Func _Select_Tab($title, $text, $controlID, $sTabName)
+    Local $hTab = ControlGetHandle($title, $text, $controlID)
+    _DebugOut("Get Handle tab "&$hTab)
+    If $hTab = 0 Then
+        Return -1
+    EndIf
+    Local $iIndex = _GUICtrlTab_FindTab($hTab, $sTabName)
+    _DebugOut("Find tab Index ="&$iIndex)
+    If $iIndex = -1 Then
+        Return -1
+    EndIf
+    _GUICtrlTab_SetCurFocus($hTab, $iIndex)
+    _DebugOut("_GUICtrlTab_SetCurFocus")
+    Return 0
+EndFunc
+
+;=======================================================================
+; 
+; File Options
+;=======================================================================
+
+Func Set_FileOptions()
+    Const $sDll32Folder ="rundll32.exe shell32.dll,Options_RunDLL 0"
+    Const $sMainTitle = "[CLASS:#32770; TITLE:Folder Options]"
+    Const $sTabControlID = "[CLASS:SysTabControl32; INSTANCE:1]"
+    RUN($sDll32Folder)
+    WaitAct($sMainTitle)
+    local $hWin = WinGetHandle($sMainTitle)
+    _DebugOut("Get Handle win "&$hWin)
+    _Select_Tab($hWin,"",$sTabControlID,"View") ; select View
+    
+    send("!D") ; send Alt-D to Restore default first
+
+    WaitAct($sMainTitle)
+    Const $sTreeViewControlID = "[CLASS:SysTreeView32; INSTANCE:1]"
+    local $hTreeView = ControlGetHandle($hWin,"",$sTreeViewControlID);
+    _DebugOut("Get Handle tree view "&$hTreeView)
+
+    ;local $iTreeViewCount = _GUICtrlTreeView_GetCount($hTreeView)
+    ;_DebugOut("Get Tree view count "&$iTreeViewCount)
+    
+    ;local $hFirst = _GUICtrlTreeView_GetFirstVisible($hTreeView)
+    ;_DebugOut("Get Handle frist in tree "&$hFirst)
+    ;_GUICtrlTreeView_SelectItem($hTreeView, $hFirst, $TVGN_FIRSTVISIBLE)
+    ;_GUICtrlTreeView_ClickItem ($hTreeView, $hFirst, "left", True)
+
+    ;local $hSec = _GUICtrlTreeView_GetItemByIndex($hTreeView,"",0)
+    ;_DebugOut("Get Handle frist in tree "&$hSec)
+    ;_GUICtrlTreeView_SelectItem($hTreeView, $hSec)
+    ;_GUICtrlTreeView_ClickItem ($hTreeView, $hSec, "left", True)
+
+    #comments-start
+    ; extract All item text , useful for debug
+    $hStart = _GUICtrlTreeView_GetFirstItem($hTreeView)
+    While $hStart <> 0x00000000
+        Local $sItem = _GUICtrlTreeView_GetText($hTreeView, $hStart)
+        ;If StringInStr($sItem, $sText) Then Return $hStart
+        _DebugOut("TreeView Text is "&$sItem)
+        $hStart = _GUICtrlTreeView_GetNext($hTreeView, $hStart)
+    WEnd
+    #comments-end
+    
+    $hAutoSrch = _GUICtrlTreeView_FindItem($hTreeView,"Automatically search for network folders and printers")
+    _GUICtrlTreeView_SelectItem($hTreeView, $hAutoSrch)
+    _GUICtrlTreeView_ClickItem ($hTreeView, $hAutoSrch, "left", True) ;click to disable
+
+    $hHideExt = _GUICtrlTreeView_FindItem($hTreeView,"Hide extensions for known file types")
+    _GUICtrlTreeView_SelectItem($hTreeView, $hHideExt)
+    _GUICtrlTreeView_ClickItem ($hTreeView, $hHideExt, "left", True) ;click to disable
+
+    $hFullPath = _GUICtrlTreeView_FindItem($hTreeView,"Display the full path in the title bar")
+    _GUICtrlTreeView_SelectItem($hTreeView, $hFullPath)
+    _GUICtrlTreeView_ClickItem ($hTreeView, $hFullPath, "left", True) ;click to enable
+
+  
+    _Select_Tab($hWin,"",$sTabControlID,"Offline Files") ; select "Offline Files" tab
+    WaitAct($sMainTitle)
+    if Button_Checked($hWin,"[CLASS:Button; INSTANCE:1]") then
+        ControlClick("","","Button1")
+    endif
+
+    WaitAct($sMainTitle)
+    ControlClick("","","Button10")
+    _DebugOut("click Button10 -> OK -> EXIT")
+
+EndFunc
+
+Set_FileOptions()
+
+
+Exit
 
 EOF
     au3_to_exe "tweak_xp.au3" "tweak_xp.exe"
