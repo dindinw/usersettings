@@ -4,22 +4,8 @@ function setup_vars()
     TYPE=${TYPE:-"NOSET"}
     INSTALLER=${INSTALLER:-"NOSET"}
 
-    if [[ $NAME == "NOSET" || $TYPE == "NOSET" || $INSTALLER == "NOSET" ]]; then
-        echo -e "check vars fails : make sure \$NAME \$TYPE \$INSTALLER are set."
-        exit 1
-    fi
-    if [[ ! -e  "$INSTALLER" ]]; then
-        echo -e "ERROR: $INSTALLER not exist."
-        exit 1
-    fi
+    check_vars
     
-    GUESTADDITIONS=${GUESTADDITIONS:-"./isos/VBoxGuestAdditions_4.3.10.iso"}
-
-    if [[ ! -e  "$GUESTADDITIONS" ]]; then
-        echo -e "ERROR: $GUESTADDITIONS not exist."
-        exit 1
-    fi
-
     if [[ -z "${HDD}" ]]; then
         HDD="${HOME}/VirtualBox VMs/${NAME}/main.vdi"
     fi
@@ -46,6 +32,25 @@ function setup_vars()
     echo "HOST KS SERV   : ${IP}:${PORT}"
     echo "KS CFG FILE    : ${KS_CFG}"
     echo "ISO_MOUNT_PATH : ${ISO_MOUNT_PATH}"
+}
+
+function check_vars(){
+
+    if [[ $NAME == "NOSET" || $TYPE == "NOSET" || $INSTALLER == "NOSET" ]]; then
+        echo -e "check vars fails : make sure \$NAME \$TYPE \$INSTALLER are set."
+        exit 1
+    fi
+
+    if [[ ! -e  "$INSTALLER" ]]; then
+        echo -e "ERROR: $INSTALLER not exist."
+        exit 1
+    fi
+    
+    GUESTADDITIONS=${GUESTADDITIONS:-"./isos/VBoxGuestAdditions_4.3.10.iso"}
+    if [[ ! -e  "$GUESTADDITIONS" ]]; then
+        echo -e "ERROR: $GUESTADDITIONS not exist."
+        exit 1
+    fi
 }
 
 

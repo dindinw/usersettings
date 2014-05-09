@@ -1,8 +1,9 @@
 . ./_test_create_vm_common.sh
 . ./create_vm.sh
 
-# The ks.cfg file of centos can work with redhat directly.
-#
+function check_vars() {
+    echo "do nothing"
+}
 function start_tftp_win(){
     # overwrriten the default version
     echo "do nothing"
@@ -146,68 +147,10 @@ echo "Stop Security Center..."
 sc stop wscsvc
 sc config wscsvc start= disabled
 echo "... Done"
-
-@rem ---------------------------------------------
-@rem Best Performance
-@rem ---------------------------------------------
-
-@rem   [HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects\VisualFXSetting]
-@rem   best performance
-@rem   0 = Let Windows choose what's best for my computer
-@rem   1 = Adjust for best appearance
-@rem   2 = Adjust for best performance
-@rem   3 = Custom 
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects /v VisualFXSetting /t REG_DWORD /d 2 /f
-
-@rem   [HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager]
-@rem   Use visual styles on windows and buttons (0=off 1=on) 
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v ThemeActive /t REG_SZ /d 0 /f
-reg delete HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v LoadedBefore /f
-reg delete HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v LastUserLangID /f
-reg delete HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v DllName /f
-reg delete HKCU\Software\Microsoft\Windows\CurrentVersion\ThemeManager /v SizeName /f
-
-@rem   [HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
-@rem   Use common tasks in folders (0=off 1=on) 
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v WebView /t REG_DWORD /d 0 /f 
-@rem   Show translucent selection rectangle (0=off 1=on)
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v ListviewAlphaSelect /t REG_DWORD /d 0 /f
-@rem   Use drop shadows for icon labels on the desktop (0=off 1=on)
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v ListviewShadow /t REG_DWORD /d 0 /f
-@rem   Use a background image for each folder type (0=off 1=on)
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v ListviewWatermark /t REG_DWORD /d 0 /f
-@rem   Slide taskbar buttons (0=off 1=on)
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v TaskbarAnimations /t REG_DWORD /d 0 /f
-
-@rem   [HKCU\Control Panel\Desktop\WindowMetrics]
-@rem   Animate windows when minimizing and maximizing (0=off 1=on)
-reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 0 /f
-
-@rem   [HKCU\Control Panel\Desktop]
-@rem   Show window contents while dragging (0=off 1=on)
-reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d 0 /f
-@rem   Smooth edges of screen fonts (0=off 2=on)
-reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d 0 /f
-
-@rem   Smooth scroll list boxes
-@rem   Slide open combo boxes
-@rem   Fade or slide menus into view
-@rem   Show shadows under mouse pointer
-@rem   Fade or slide tooltips into view
-@rem   Fade out menu items after clicking
-@rem   Show shadows under menus
-@rem   (All off = 90,12,01,80   All on = 9e,3e,05,80)
-reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 90120180 /f
-
-@rem   [HKCU\Control Panel\Appearance]
-
-reg add "HKCU\Control Panel\Appearance" /v Current /t REG_SZ /d "Windows Standard" /f
-reg add "HKCU\Control Panel\Appearance" /v NewCurrent /t REG_SZ /d "Windows Standard" /f
-
 echo "Reboot..."
 shutdown -r -t 0
 EOF
-    cp 
+    cp ./tweak_xp.exe ./vhd_mount/tweak_xp.exe
     imdisk -d -m vhd_mount
     #test -d vhd_mount && rmdir vhd_mount
 }
@@ -267,7 +210,7 @@ Const $sSysdmCplRmot = "control sysdm.cpl,,6"
 
 Global $hWinMain ; handle for main
 
-_DebugSetup("Debug Console", True) ; start displaying debug environment
+;_DebugSetup("Debug Console", True) ; start displaying debug environment
 
 
 ;=======================================================================
@@ -624,15 +567,15 @@ function au3_to_exe(){
     #echo ${au3_file} ${exe_file}
     gen_tweak_cmd="$(to_win_path ${AUTOIT}) /in $(to_win_path $(pwd))\\$au3_file /out $(to_win_path $(pwd))\\$exe_file /comp 4 /pack"
     #echo "$gen_tweak_cmd"
-    start cmd /k "$gen_tweak_cmd && exit"
+    start //wait cmd /k "$gen_tweak_cmd && exit" && echo done
 }
 
 NAME=windowsxp-sp3-xp_mode
 TYPE=WindowsXP
 GUESTADDITIONS="../../vagrant-centos/isos/VBoxGuestAdditions_4.3.10.iso"
 HDD="/c/Users/yidwu/Downloads/VirtualXPVHD"
-INSTALLER="/d/ISO/windows/WinXP-SP3.iso"
-KS_CFG="ks_centos.cfg"
+INSTALLER="NOT_NEED_IN_VHD_MODE"
+KS_CFG="NOT_NEED_IN_VHD_MODE"
 
 VHD_LOC="${HOME}/Downloads"
 VHD_FILE_NAME="VirtualXPVHD"
@@ -654,6 +597,7 @@ AUTOIT="${HOME}\Downloads\autoit-v3\install\Aut2Exe\Aut2exe"
 if [[ -z "$1" ]]; then
     clean
     extract_vhd
+    gen_tweak_exe
     modify_vhd
     main
 elif [[ "$1" == "main" ]]; then
