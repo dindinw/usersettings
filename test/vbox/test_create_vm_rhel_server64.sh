@@ -6,7 +6,7 @@
 function main(){
     NAME=rhel-server-6.4-x86_64
     TYPE=RedHat_64
-    INSTALLER="/e/rhel-server-6.4-x86_64-dvd.iso"
+    INSTALLER="/d/ISO/redhat/rhel-server-6.4-x86_64-dvd.iso"
     GUESTADDITIONS="../../vagrant-centos/isos/VBoxGuestAdditions_4.3.10.iso"
     KS_CFG="ks_centos.cfg"
     main_template
