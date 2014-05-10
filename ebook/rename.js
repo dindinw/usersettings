@@ -55,6 +55,11 @@ function requestByGoogleBook(changeNameJob,isbn){
             var date=jsObject.items[0].volumeInfo.publishedDate.trim();
             
             if (subtitle != undefined) title = title+" - "+subtitle.trim();
+            
+            title = title.replace(/:/g," -");
+            title = title.replace(/\//g,"&");
+            title = title.replace(/\?/g,"");
+
             newName.push(title);
             newName.push(date.substr(0,7));
             newName.push(isbn);
@@ -98,7 +103,8 @@ function requestByAmazon(changeNameJob,ASIN){
                 title = $('#productTitle').text();
             }
             title = title.replace(/:/g," -");
-            title = title.replace(/\//g,"&")
+            title = title.replace(/\//g,"&");
+            title = title.replace(/\?/g,"");
             
             var date
             var pubdate = $('#pubdate').val();
@@ -335,7 +341,7 @@ function renameBook(parentDir,file){
     }
 }
 
-function uncompressRarFile(rarfile,isbn){
+function uncompressRarFile(rarfile,isbn,waitFor){
     if (fs.statSync(path.join(BOOK_SAVE_PATH,rarfile)).isDirectory()) return;
     var fileExt=path.extname(rarfile);
     if (fileExt === ".rar") {
@@ -393,7 +399,7 @@ function doDefaultRename() {
         if (path.extname(file)===".rar"){
             var isbn = parseISBN(file);
             if (isbn !== undefined){
-                uncompressRarFile(file,isbn);
+                uncompressRarFile(file,isbn,waitFor);
             }
         }
     })});
