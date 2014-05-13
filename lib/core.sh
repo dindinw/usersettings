@@ -1,11 +1,29 @@
 #!/bin/bash
 
+function trace_begin()
+{
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "!!! BASH EXECUTION TRACE BEGIN                                    !!!"
+    echo "!!!                                                               !!!"
+    cmd /c sleep -m 1 1>/dev/null
+    set -x
+}
+function trace_end()
+{
+    set +x
+    cmd /c sleep -m 1 1>/dev/null
+    echo "!!!                                                               !!!"
+    echo "!!! BASH EXECUTION TRACE END                                      !!!"
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+}
+
 function currentDir()
 {
     local DIR=$( cd "$( dirname "$0" )" && pwd )
     echo $DIR
 }
 
+# /foo/bar -> \foo\bar
 function to_win_path(){
     if [ -z "$1" ]; then
         echo "$@"
@@ -23,6 +41,7 @@ function to_win_path(){
         fi
     fi
 }
+# /foo/bar -> \\foo\\bar
 function to_win_path2(){
     if [ -z "$1" ]; then
         echo "$@"
@@ -41,15 +60,16 @@ function to_win_path2(){
     fi
 }
 
+# Need to remove wmic calling grabage, a file named 'TempWmicBatchFile.bat',
+# in Windows platfrom.
 function clean_wmi_tmp_file()
 {
     rm -f "TempWmicBatchFile.bat" &> /dev/null
 }
 
 ################################################################################
-#  name : sysInfo
+#  name : ostype
 #  desc : Get the Platform Information
-# usage : if [[ "$OS" == "$OS_LINUX" ]] && [[ "$MACH" == "$MACH_64" ]]; then 
 # 
 ################################################################################
 
@@ -72,7 +92,7 @@ FILE_EXT_MAC=".dmg"
 FILE_EXT_WIN=".exe"
 FILE_EXT="UNKNOWN"
 
-function sysInfo()
+function ostype()
  {
     OS=$(uname)
     MACH=$(uname -m)
@@ -113,7 +133,7 @@ function sysInfo()
         exit -1
     fi
 }
-sysInfo
+ostype
 clean_wmi_tmp_file
 
 LIGHTGREEN="\[\033[1;32m\]"
