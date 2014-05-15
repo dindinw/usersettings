@@ -59,4 +59,33 @@ So here is 4 ips in a guest's view:
 10.0.2.4  : built-in TFTP server, aka, the host ip
 10.0.2.15 : guest(myself) ip by default
 
+### NAT Network (4.3 above feature)
+
+* guest access internet 
+* guest access each other
+* host access guest
+
+#### Create NAT network
+
+`VBoxManage natnetwork add -t nat-int-network -n "192.168.15.0/24" -e -h on`
+`-t --natname -n --network -e --enable -h --dhcp`
+
+Comand above will create a NAT network named `nat-int-network`, the network range `192.168.15.0/255.255.255.0`
+The gateway is `192.168.15.1`, and enabled the NAT network and turn on the DHCP.
+
+#### Start NAT network
+
+`VBoxManage natnetwork start -t nat-int-network`
+
+After the NAt network is started, two process is started in background . (VBoxNetDHCP.exe and VBoxNetNAT.exe in Windows Platform)
+
+
+### host-only network
+
+* host acess guest
+* guset acess other
+* if want guest access internet only another NIC (NAT)
+
+
+
 #### Think about the vftp option for a net boot 
