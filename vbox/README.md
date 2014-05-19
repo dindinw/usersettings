@@ -35,6 +35,10 @@ VBox Network
 
 VM is invisible and unreachable from the outside internet; you cannot run a server this way unless you set up port forwarding
 
+The network frames sent out by the guest operating system are received by VirtualBox's NAT engine, which extracts the TCP/IP data and resends it using the host operating system. To an application on the host, or to another computer on the same network as the host, it looks like the data was sent by the VirtualBox application on the host, using an IP address belonging to the host. VirtualBox listens for replies to the packages sent, and repacks and resends them to the guest machine on its private network.
+
+Host Network <-> Host (IP) <-> VBox NAT engine <-> Guest (IP)
+
 Details : (http://www.virtualbox.org/manual/ch09.html#changenat)
   *  In NAT mode, the guest network interface is assigned to the IPv4 range 10.0.x.0/24 by default where x corresponds to the instance of the NAT interface +2. (aka. the first card is connected to 10.0.2.0, the second to the network 10.0.3.0 and so on) 
   *  the guest is assigned to the address 10.0.2.15, the gateway 10.0.2.2,  name server 10.0.2.3
@@ -61,9 +65,9 @@ So here is 4 ips in a guest's view:
 
 ### NAT Network (4.3 above feature)
 
-* guest access internet 
-* guest access each other
-* host access guest
+* guest can access host network
+* guest can access each other (the NAT network defined)
+* host can't access guest directly (need to add a port forward)
 
 #### Create NAT network
 
@@ -82,9 +86,11 @@ After the NAt network is started, two process is started in background . (VBoxNe
 
 ### host-only network
 
-* host acess guest
-* guset acess other
-* if want guest access internet only another NIC (NAT)
+* host can access guest network ( by the addtional network adpater created in host)
+* guset access each other (using the host adapter as gatework)
+* guest CANNOT access outside (add a additional guest network adapter, for exmaple, the default NAT)
+
+
 
 
 
