@@ -63,6 +63,7 @@ and redist packages (don’t worry, they will be added back via the service pack
 
 * Ver : 7.1
 * Name: VC-Compiler-KB2519277.exe
+* MD5 : 485b2c95b20961b031d2ce0a717461dd
 * Size: 121.0 MB
 * Down: http://download.microsoft.com/download/7/5/0/75040801-126C-4591-BCE4-4CD1FD1499AA/VC-Compiler-KB2519277.exe
 * Date: 3/30/2011
