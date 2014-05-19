@@ -18,6 +18,23 @@ The Scripts to generate the ViritualBox VMs automaticly and do some required pro
 [devio]:http://www.ltr-data.se/files/devio.exe
 [pcbios]:http://www.vmlite.com/images/fbfiles/files/pcbios.zip
 
+XP Mode for Window 7
+--------------------
+
+* Ver : 1.3.7600.16423
+* Date: 10/19/2009
+
+* Name: WindowsXPMode_en-us.exe
+
+  * Down: http://download.microsoft.com/download/7/2/C/72C7BAB7-2F32-4530-878A-292C20E1845A/WindowsXPMode_en-us.exe
+  * Size: 469.8 MB
+
+* Name: WindowsXPMode_N_en-us.exe
+
+  * Down: http://download.microsoft.com/download/7/2/C/72C7BAB7-2F32-4530-878A-292C20E1845A/WindowsXPMode_N_en-us.exe
+  * Size: 449.0 MB
+  * MD5 : 0819059e445efb676e04bd22b3aade3c
+
 Notes About XP Mode EULA:
 -------------------------
 
