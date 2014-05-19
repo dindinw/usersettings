@@ -156,6 +156,8 @@ echo "remove build-in zip"
 regsvr32 /u /s %windir%\system32\zipfldr.dll
 reg delete "HKEY_CLASSES_ROOT\CLSID\{E88DCCE0-B7B3-11d1-A9F0-00AA0060FA31}" /f
 reg delete "HKEY_CLASSES_ROOT\CLSID\{0CD7A5C0-9F37-11CE-AE65-08002B2E1262}" /f
+del %windir%\system32\zipfldr.dll
+del %windir%\system32\dllcache\zipfldr.dll
 echo "... Done"
 echo "Reboot..."
 shutdown -r -t 0
@@ -583,12 +585,20 @@ function au3_to_exe(){
 function add_sharedfolder()
 {
     echo "add shared folder "
-    VBoxManage sharedfolder add ${NAME} --name "DOWN" --hostpath "${HOME}\Downloads" --transient
+    local ro=""
+    if [[ "$1" == "ro" ]];then 
+        ro="--readonly"
+    fi
+    VBoxManage sharedfolder add ${NAME} --name "DOWN" --hostpath "${HOME}\Downloads" --transient ${ro}
 }
 function remove_sharedFolder()
 {
     echo "remove shared folder..."
     VBoxManage sharedfolder remove ${NAME} --name "DOWN" --transient
+}
+function set_clipboard() {
+    echo "set up clipboard to bidirectional"
+    VBoxManage controlvm ${NAME} clipboard bidirectional
 }
 
 NAME=windowsxp-sp3-xp_mode
@@ -621,7 +631,8 @@ if [[ -z "$1" ]]; then
     gen_tweak_exe
     modify_vhd
     main
-    add_sharedfolder
+    add_sharedfolder ro
+    set_clipboard
 elif [[ "$1" == "main" ]]; then
     main
 elif [[ "$1" == "clean" ]]; then
@@ -632,12 +643,16 @@ elif [[ "$1" == "modvhd" ]]; then
     modify_vhd
 elif [[ "$1" == "genexe" ]]; then
     gen_tweak_exe
-elif [[ "$1" == "addsf" ]]; then
+elif [[ "$1" == "addsf_rw" ]]; then
     add_sharedfolder
+elif [[ "$1" == "addsf_ro" ]]; then
+    add_sharedfolder ro
 elif [[ "$1" == "rmsf" ]]; then
     remove_sharedFolder
 elif [[ "$1" == "reboot" ]]; then
     stop_vm_vbox
     start_vm_vbox
+elif [[ "$1" == "clipb" ]]; then
+    set_clipboard
 fi
 
