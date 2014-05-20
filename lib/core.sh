@@ -28,17 +28,23 @@ function to_win_path(){
     if [ -z "$1" ]; then
         echo "$@"
     else
-        if [ -f "$1" ]; then
-            local dir=$(dirname "$1")
-            local fn=$(basename "$1")
-            echo "$(cd "$dir"; echo "$(pwd -W)/$fn")" | sed 's|/|\\|g';
-        else
-            if [ -d "$1" ]; then
-                echo "$(cd "$1"; pwd -W)" | sed 's|/|\\|g';
-            else
-                echo "$1" | sed 's|^/\(.\)/|\1:\\|g; s|/|\\|g';
-            fi
-        fi
+        echo "$1" | sed 's|^/\(.\)/|\1:\\|g; s|/|\\|g';
+        # if [ -f "$1" ]; then
+        #     local dir=$(dirname "$1")
+        #     # Note, dirname will always return ".", if a windows path given
+        #     if [[ "$dir" == "." ]] && [[ ! "$1" == "." ]]; then 
+        #         echo "$1" | sed 's|^/\(.\)/|\1:\\|g; s|/|\\|g';
+        #         return
+        #     fi
+        #     local fn=$(basename "$1")
+        #     echo "$(cd "$dir"; echo "$(pwd -W)/$fn")" | sed 's|/|\\|g';
+        # else
+        #     if [ -d "$1" ]; then
+        #         echo "$(cd "$1"; pwd -W)" | sed 's|/|\\|g';
+        #     else
+        #         echo "$1" | sed 's|^/\(.\)/|\1:\\|g; s|/|\\|g';
+        #     fi
+        # fi
     fi
 }
 # /foo/bar -> \\foo\\bar
@@ -46,17 +52,18 @@ function to_win_path2(){
     if [ -z "$1" ]; then
         echo "$@"
     else
-        if [ -f "$1" ]; then
-            local dir=$(dirname "$1")
-            local fn=$(basename "$1")
-            echo "$(cd "$dir"; echo "$(pwd -W)/$fn")" | sed 's|/|\\\\|g';
-        else
-            if [ -d "$1" ]; then
-                echo "$(cd "$1"; pwd -W)" | sed 's|/|\\\\|g';
-            else
-                echo "$1" | sed 's|^/\(.\)/|\1:\\\\|g; s|/|\\\\|g';
-            fi
-        fi
+        echo "$1" | sed 's|^/\(.\)/|\1:\\\\|g; s|/|\\\\|g';
+        # if [ -f "$1" ]; then
+        #     local dir=$(dirname "$1")
+        #     local fn=$(basename "$1")
+        #     echo "$(cd "$dir"; echo "$(pwd -W)/$fn")" | sed 's|/|\\\\|g';
+        # else
+        #     if [ -d "$1" ]; then
+        #         echo "$(cd "$1"; pwd -W)" | sed 's|/|\\\\|g';
+        #     else
+        #         echo "$1" | sed 's|^/\(.\)/|\1:\\\\|g; s|/|\\\\|g';
+        #     fi
+        # fi
     fi
 }
 
