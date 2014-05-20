@@ -21,6 +21,11 @@ The Scripts to generate the ViritualBox VMs automaticly and do some required pro
 XP Mode for Window 7
 --------------------
 
+_Windows XP Mode provides a 32-bit virtual Windows XP Professional Service Pack 3 (SP3) environment. This download includes a virtual hard disk (.vhd file) with Windows XP SP3 preinstalled._ 
+
+See More details from [Microsoft offical page](http://www.microsoft.com/en-us/download/details.aspx?id=8002)
+
+
 * Ver : 1.3.7600.16423
 * Date: 10/19/2009
 
