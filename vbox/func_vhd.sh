@@ -29,16 +29,16 @@ function wim_apply()
     local wim_file="$1"
     local img_index="$2"
     local apply_to="$3"
-    local imagex_cmd="c:\Windows\Setup\Scripts\imagex /apply $(to_win_path $wim_file) ${img_index} $(to_win_path $apply_to) /check /verify"
+    local imagex_cmd="c:\Windows\Setup\Scripts\imagex /apply $(to_win_path $wim_file) ${img_index} $(to_win_path $apply_to) /check /verify && exit"
     echo excuting ${imagex_cmd} ...
-    start //wait cmd //c "$imagex_cmd"
+    start //wait cmd //k "$imagex_cmd"
 }
 
 # using diskpart to do this
 function vhd_create()
 {
     local vhd_name="$1"
-    local size=${2:~25000}
+    local size=${2:-25000}
     echo "vhd name : ${vhd_name}"
     echo "size : ${size}"
 
@@ -47,6 +47,7 @@ create vdisk file="$(to_win_path ${vhd_name})" maximum=25000 type=expandable
      select vdisk file"$(to_win_path ${vhd_name})"
      attach vdisk
      create partition primary
+     online volume
      format quick FS=NTFS label=VHD
      detach vdisk
 exit
@@ -70,13 +71,14 @@ EOF
 function vhd_assign()
 {
     local vhd_name="$1"
-    local letter="$2"
+    local letter="${2:0:1}" #substr(0,1) to remove ':'
+    #echo letter is ${letter}
 
-#Note: the several recan commands after attach command to let diskpart wait for secs, 
-#otherwise, the assign dirver letter may fail to 'no volume' error
-
+# The rescan to make diskpart wait for secs, otherwise the assign fail.
 cat <<EOF > vhd_assign.txt
 select vdisk file"$(to_win_path ${vhd_name})"
+    automount SCRUB
+    rescan
     attach vdisk
     rescan
     rescan
@@ -86,11 +88,43 @@ select vdisk file"$(to_win_path ${vhd_name})"
     rescan
     select partition 1
     assign letter=${letter}
+    rescan
     list vdisk
     list volume
 exit
 EOF
     call_diskpart vhd_assign.txt
+}
+
+function vhd_active() {
+    local vhd_name="$1"
+cat <<EOF > vhd_active.txt
+select vdisk file"$(to_win_path ${vhd_name})"
+    select partition 1
+    active
+exit
+EOF
+    call_diskpart vhd_active.txt
+}
+
+function vhd_makebootable() 
+{
+    local vhd_letter="$1"
+    local NOT_ALLOW="A:B:C:D:E:F:a:b:c:d:e:f:"
+    if [[ -z "${vhd_letter}" ]]; then
+        echo "disk letter not provided."
+        exit 0
+    fi
+    echo $NOT_ALLOW|grep $vhd_letter >/dev/null
+    if [[ $? -eq 0 ]]; then 
+        echo "not allow do this in letter [${vhd_letter}]"
+        exit 0
+    fi
+        
+    bcdcmd="bootsect /nt60 ${vhd_letter} /force && ${vhd_letter}\windows\system32\bcdboot ${vhd_letter}\windows\ /s ${vhd_letter} && exit"
+    echo $bcdcmd
+    start //wait cmd //k "$bcdcmd"
+
 }
 
 
