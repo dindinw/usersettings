@@ -123,7 +123,7 @@ function vhd_makebootable()
     local tempfolder=$(to_win_path ${HOME}"/_to_run_bcdroot")
     mkdir -p $tempfolder
     if [[ ! -d ${tempfolder} ]]; then echo "temp folder not found.";exit 0; fi
-    # need not bootsect /nt60 ${vhd_letter} /force && ?
+    # need not do 'bootsect /nt60 ${vhd_letter} /force &&', why not?
     bcdcmd="copy ${vhd_letter}\windows\system32\bcdboot.exe ${tempfolder} && 
             ${tempfolder}\bcdboot.exe ${vhd_letter}\windows\ /s ${vhd_letter} && 
             del ${tempfolder}\bcdboot.exe && exit"
