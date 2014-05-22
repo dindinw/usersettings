@@ -18,38 +18,6 @@ The Scripts to generate the ViritualBox VMs automaticly and do some required pro
 [devio]:http://www.ltr-data.se/files/devio.exe
 [pcbios]:http://www.vmlite.com/images/fbfiles/files/pcbios.zip
 
-XP Mode for Window 7
---------------------
-
-_Windows XP Mode provides a 32-bit virtual Windows XP Professional Service Pack 3 (SP3) environment. This download includes a virtual hard disk (.vhd file) with Windows XP SP3 preinstalled._ 
-
-See More details from [Microsoft offical page](http://www.microsoft.com/en-us/download/details.aspx?id=8002)
-
-
-* Ver : 1.3.7600.16423
-* Date: 10/19/2009
-
-* Name: WindowsXPMode_en-us.exe
-
-  * Down: http://download.microsoft.com/download/7/2/C/72C7BAB7-2F32-4530-878A-292C20E1845A/WindowsXPMode_en-us.exe
-  * Size: 469.8 MB
-
-* Name: WindowsXPMode_N_en-us.exe
-
-  * Down: http://download.microsoft.com/download/7/2/C/72C7BAB7-2F32-4530-878A-292C20E1845A/WindowsXPMode_N_en-us.exe
-  * Size: 449.0 MB
-  * MD5 : 0819059e445efb676e04bd22b3aade3c
-
-Notes About XP Mode EULA:
--------------------------
-
-While a virtual machine created by XP Mode VHD file should also run under OS X and Linux, but running under anything but Windows 7 Professional, Enterprise, or Ultimate would apparently *violate the Windows XP Mode EULA*:
-
-_... You may install, use, access, display and run one copy of the Software in a single virtual machine on a single computer, such as a workstation, terminal or other device ("Workstation Computer"), that contains a licensed copy of Windows 7 Professional, Enterprise or Ultimate edition. Virtualization software is required to use the Software on the Workstation Computer ... 1.2  Activation.  If you are using the Software with a properly licensed copy of Windows 7 Professional, Enterprise or Ultimate, activation of the Software is not required._
-
-So according to the EULA, If You want to use XP mode in a Linux or OSX, the activation of XP Mode is required. And in one Host, only one XP mode VM 
-to run in the same time.
-
 VBox Network
 ------------
 
