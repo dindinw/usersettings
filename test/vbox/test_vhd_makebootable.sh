@@ -3,14 +3,14 @@
 vhd="${HOME}/Downloads/boot.vhd"
 bootwim="${HOME}/Downloads/boot.wim"
 
-# vhd_detach ${vhd}
+vhd_detach ${vhd}
 # rm -f ${vhd}
 # vhd_create ${vhd} 1000
 vhd_assign ${vhd} "v:"
 #wim_apply ${bootwim} 1 "v:"
-#vhd_makebootable "v:"
-vhd_active ${vhd}
-vhd_detach ${vhd}
+vhd_makebootable "v:"
+#vhd_active ${vhd}
+#vhd_detach ${vhd}
 
 
 ############ Test for Win7(X17-59337.iso) install.wim

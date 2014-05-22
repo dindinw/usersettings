@@ -125,7 +125,9 @@ function vhd_makebootable()
     if [[ ! -d ${tempfolder} ]]; then echo "temp folder not found.";exit 0; fi
     # need not do 'bootsect /nt60 ${vhd_letter} /force &&', why not?
     bcdcmd="copy ${vhd_letter}\windows\system32\bcdboot.exe ${tempfolder} && 
-            ${tempfolder}\bcdboot.exe ${vhd_letter}\windows\ /s ${vhd_letter} && 
+            ${tempfolder}\bcdboot.exe ${vhd_letter}\windows\ /s ${vhd_letter} ||
+            echo try to use win8.1 bcdboot &&
+            .\bcdboot.exe ${vhd_letter}\windows\ /s ${vhd_letter} &&
             del ${tempfolder}\bcdboot.exe && exit"
     bcdcmd=$(echo $bcdcmd)
     echo execute cmd [$bcdcmd]
