@@ -102,11 +102,14 @@ Internet Explorer Application Compatibility VPC Image
         http://download.microsoft.com/download/B/7/2/B72085AE-0F04-4C6F-9182-BF1EE90F5273/Windows_XP_IE6.exe 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-TOOLS
-=====
+Windows System Image Manager
+============================
 
-Windows Automated Installation Kit (AIK) for Windows 7
--------------------------------------------------------
+* Offical Page : http://technet.microsoft.com/en-us/library/cc766347%28v=ws.10%29.aspx
+
+Windows System Image Manager (Windows SIM) creates and manages unattended Windows Setup answer files in a graphical user interface (GUI). Windows SIM is part of the AIK for Windows 7,or ADK for Windows 8.
+
+### Windows Automated Installation Kit (AIK) for Windows 7
 
 * Offical Page : http://www.microsoft.com/en-us/download/details.aspx?id=5753
 
@@ -117,3 +120,13 @@ Windows Automated Installation Kit (AIK) for Windows 7
 * File Size    : 1.7 GB
 * Down         : http://download.microsoft.com/download/8/E/9/8E9BBC64-E6F8-457C-9B8D-F6C9A16E6D6A/KB3AIK_EN.iso
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Windows Assessment and Deployment Kit (ADK) for Windows 8
+
+* Offical Page : http://www.microsoft.com/en-us/download/details.aspx?id=30652
+
+~~~~
+http://download.microsoft.com/download/6/A/E/6AEA92B0-A412-4622-983E-5B305D2EBE56/adk/adksetup.exe
+
+network install only
+~~~
