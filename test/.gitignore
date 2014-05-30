@@ -1,5 +1,9 @@
 _CONFIG_OVERWRITE
 _CONFIG
 _CONF_OVERWRITE
+_tmp
 *.class
 *.txt
+*.pdf
+*.exe
+*.tar.gz
