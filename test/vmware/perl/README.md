@@ -7,6 +7,9 @@ The VMMare offical Perl SDK. Which is a client-side Perl framework that provides
 Site     : https://www.vmware.com/support/developer/viperltoolkit/
 Version  : 5.5
 Download : https://my.vmware.com/web/vmware/details?productId=353&downloadGroup=SDKPERL550
+Windows  : VMware-vSphere-Perl-SDK-5.5.0-1384587.exe
+Linux 64 : VMware-vSphere-Perl-SDK-5.5.0-1384587.x86_64.tar.gz
+Document : vsphere-esxi-vcenter-server-55-sdk-for-perl-programming-guide.pdf
 ~~~~~~~~~~
 
 
@@ -26,13 +29,14 @@ A Case Study of CloneVM Task
 **vmclone.pl** is under `C:\Program Files (x86)\VMware\VMware vSphere CLI\Perl\apps\vm\vmclone.pl`
 
 The command usage for making a clone without any customization:
+
 ~~~~~~~~~~~
 perl vmclone.pl --username username --password mypassword
                  --vmhost <hostname/ipaddress> --vmname DVM1 --vmname_destination DVM99
                  --url https://<ipaddress>:<port>/sdk/webService
-~~~~~~~~~~~~
+~~~~~~~~~~~
 
-THe the case we will clone a VM named '071113_min_rhel6u4_FoundationServices1.5.03' to 'FoundationServices_Clone'
+In the case , we will clone a VM named '071113_min_rhel6u4_FoundationServices1.5.03' to 'FoundationServices_Clone' by executing command below.
 
 ~~~~~~~~~~~
 perl vmclone.pl --url https://<venter_ip>/sdk/webService --username user --password password --vmname 071113_min_rhel6u4_FoundationServices1.5.03 --vmhost 10.20.22.241 --vmname_destination FoundationServices_Clone
@@ -42,7 +46,7 @@ perl vmclone.pl --url https://<venter_ip>/sdk/webService --username user --passw
 
 #### 1. Get View by vmname
 
-in the case `071113_min_rhel6u4_FoundationServices1.5.03` aka check if the vm exist.
+First, need to check if vmname `071113_min_rhel6u4_FoundationServices1.5.03` exist.
 
 ~~~~~~~~~~~
 my $vm_name = Opts::get_option('vmname');
@@ -52,7 +56,7 @@ my $vm_views = Vim::find_entity_views(view_type => 'VirtualMachine',
 
 #### 2. Get the hostView by vmhost
 
-in the case `10.20.22.241`, aka, check if the host exist.
+Next, need to check if the vmhost `10.20.22.241` exist.
 
 ~~~~~~~~~~~
 my $host_name =  Opts::get_option('vmhost');
@@ -62,7 +66,7 @@ my $host_view = Vim::find_entity_view(view_type => 'HostSystem',
 
 #### 3. Build VirtualMachineRelocateSpec
 
-try to relocate resource : datastore. host, resourcepool.  
+Next, need to to relocate resource : datastore. host, resourcepool. by create a `VirtualMachineRelocateSpec` 
 
 ~~~~~~~~~~~
 my $relocate_spec =
@@ -72,6 +76,8 @@ VirtualMachineRelocateSpec->new(datastore => $ds_info{mor},
 ~~~~~~~~~~~
 
 #### 4. Build VirtualMachineCloneSpec
+
+Then, We can build `VirtualMachineCloneSpec` by `VirtualMachineRelocateSpec`
 
 ~~~~~~~~~~~
 $clone_spec = VirtualMachineCloneSpec->new(
@@ -83,6 +89,7 @@ $clone_spec = VirtualMachineCloneSpec->new(
 
 #### 5. Do CloneVM 
 
+Finally, do the `CloneVm` according to the `VirtualMachineCloneSpec` we create before.
 ~~~~~~~~~~~
 $_->CloneVM(folder => $_->parent,
                name => Opts::get_option('vmname_destination'),
@@ -91,23 +98,32 @@ $_->CloneVM(folder => $_->parent,
 
 ### Internal Calling of CloneVM
 
+#### Start CloneVM_Task
+From `Perl\lib\VMware\VIM2Runtime.pm`, start a task to do CloneVM
+
 ~~~~~~~~~~~
-....
 package VirtualMachineOperations;
+
+sub CloneVM {
+   my ($self, %args) = @_;
+   return $self->waitForTask($self->CloneVM_Task(%args));
+}
+
 sub CloneVM_Task {
    my ($self, %args) = @_;
    my $response = Util::check_fault($self->invoke('CloneVM_Task', %args));
    return $response
 }
 
-sub CloneVM {
-   my ($self, %args) = @_;
-   return $self->waitForTask($self->CloneVM_Task(%args));
-}
-....
+~~~~~~~~~~~
 
+#### Do the CloneVM_Task
+
+Form `Perl\lib\VMware\VIM2Stub.pm`, create the required SOAP envlope, do the SOAP request, then deserialize response. 
+
+~~~~~~~~~~~
 package VimService;
-....
+
 sub CloneVM_Task {
    my ($self, %args) = @_;
    my $vim_soap = $self->{vim_soap};
@@ -117,7 +133,6 @@ sub CloneVM_Task {
    my ($result, $fault) = $vim_soap->request('CloneVM_Task', $arg_string, $soap_action);
    return deserialize_response($result, $fault, 'ManagedObjectReference', 0);
 }
-....
 ~~~~~~~~~~~
 
 ### The HTTP (SOAP) Request Internal Details
