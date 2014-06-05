@@ -178,6 +178,10 @@ function setup_ssh_vbox(){
 }
 
 
+# NOT_IN_USE
+# The orignal kisckstar is a web service set up in host machine, when guest boot
+# ks=http://10.0.2.3:8088 will be called. 
+# The way is not work for ubuntu linux, use floopy image with ks file installed instead
 function setup_kickstart_service(){
     local ip=${1:-$IP}
     local port=${2:-$PORT} #default is 8088
@@ -235,4 +239,32 @@ LABEL $NAME
     KERNEL /$NAME/images/pxeboot/vmlinuz
     APPEND initrd=/$NAME/images/pxeboot/initrd.img ks=${ks}
 EOL
+}
+
+
+function create_floppy_image_win(){
+    local floppy="$1"
+    echo "creating $floppy and format"
+    imdisk -a -f ${floppy} -s 1440K -m x: && cmd //C "format x: /Q"
+    echo "umount $floppy"
+    imdisk -D -m x:
+}
+
+function copy_file_to_floppy_image() {
+    local floppy="$1"
+    local file="$2"
+    if [ ! -f "${floppy}" ]; then
+        echo "floppy image : [ ${floppy} ] not found!"
+        exit 0
+    fi
+    if [ ! -f "${file}" ]; then
+        echo "to copy file : [ ${file} ] not found!"
+        exit 0
+    fi
+    echo mount $floppy ...
+    imdisk -a -f ${floppy} -m x:
+    echo install $file to $floppy
+    cmd //c "copy $(to_win_path $file) x:"
+    echo "umount $floppy ..."
+    imdisk -D -m x:
 }
