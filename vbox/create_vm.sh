@@ -88,7 +88,7 @@ function main_template(){
     # start vbox vm
     vbox_start_vm ${NAME}
     
-    # wait for finsh
+    # kickstart service is so a marker for if tftp load is finished
     start_kickstart_service
     
     # stop tftp and umount iso

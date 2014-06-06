@@ -1,4 +1,7 @@
 #!/bin/bash
+# tell ks service we are finished, please stop tftp server
+# TODO, remove hardcoding url
+wget -qO - http://10.0.2.3:8088
 
 # passwordless sudo
 echo "%sudo   ALL=NOPASSWD: ALL" >> /etc/sudoers

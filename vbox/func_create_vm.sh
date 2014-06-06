@@ -187,6 +187,9 @@ function vbox_create_vm_ubuntu(){
     if [[ -f "late_command.sh" ]]; then
         floppy_copy_file_${arch} ${floopy} "late_command.sh"
     fi
+    if [[ -f "${KS_CFG}" ]]; then
+        floppy_copy_file_${arch} ${floopy} "${KS_CFG}"
+    fi
     vbox_attach_floopy ${vm_name} ${floopy}
 }
 
