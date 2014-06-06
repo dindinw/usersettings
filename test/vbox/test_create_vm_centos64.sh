@@ -12,6 +12,6 @@ function main(){
 
 function create_pxecfg_centos65-x86_64() {
     echo call create_pxecfg_centos6 $1 $2
-    create_pxecfg_centos6 "$1" "$2"
+    create_pxecfg_default "$1" "$2"
 }
 main

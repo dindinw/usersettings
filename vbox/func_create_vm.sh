@@ -1,60 +1,38 @@
-function setup_vars() 
-{
-    NAME=${NAME:-"NOSET"}
-    TYPE=${TYPE:-"NOSET"}
-    INSTALLER=${INSTALLER:-"NOSET"}
+##########################################
+# FLOPPY functions 
+##########################################
 
-    check_vars
-    
-    if [[ -z "${HDD}" ]]; then
-        HDD="${HOME}/VirtualBox VMs/${NAME}/main.vdi"
-    fi
-    HDD_SWAP="${HOME}/VirtualBox VMs/${NAME}/swap.vdi"
-    VBOX_FILE="${HOME}/VirtualBox VMs/${NAME}/${NAME}.vbox"
-    VBOX_TFTP_DEFAULT="${HOME}/.VirtualBox/TFTP"
-    NATNET=10.0.2.0/24
-    PORT=${PORT:-"8088"} #default is 8088
-    IP=`echo ${NATNET} | sed -nE 's/^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}).*/\1/p'`
-    IP=${IP}.3 #default is 10.0.2.3
-    KS_CFG=${KS_CFG:-"ks.cfg"} #default is ks.cfg
-    TFTP_PATH=${TFTP_PATH:-$(pwd)/tftp}
-    ISO_MOUNT_PATH=${ISO_MOUNT_PATH:-"$TFTP_PATH/$NAME"}
-
-    echo "HOST ARCH      : ${arch}"
-    echo "VM NAME        : ${NAME}"
-    echo "VM TYPE        : ${TYPE}"
-    echo "VM INSTALLER   : ${INSTALLER}"
-    echo "GUESTADDITIONS : ${GUESTADDITIONS}"
-    echo "HDD            : ${HDD}"
-    echo "HDD_SWAP       : ${HDD_SWAP}"
-    echo "VBOX_FILE      : ${VBOX_FILE}"
-    echo "TFTP_PATH      : ${TFTP_PATH}"
-    echo "HOST KS SERV   : ${IP}:${PORT}"
-    echo "KS CFG FILE    : ${KS_CFG}"
-    echo "ISO_MOUNT_PATH : ${ISO_MOUNT_PATH}"
+function floppy_create_win(){
+    local floppy="$1"
+    echo "creating $floppy and format"
+    imdisk -a -f ${floppy} -s 1440K -m x: && cmd //C "format x: /Q"
+    echo "umount $floppy"
+    imdisk -D -m x:
 }
 
-function check_vars(){
-
-    if [[ $NAME == "NOSET" || $TYPE == "NOSET" || $INSTALLER == "NOSET" ]]; then
-        echo -e "check vars fails : make sure \$NAME \$TYPE \$INSTALLER are set."
-        exit 1
+function floppy_copy_file_win() {
+    local floppy="$1"
+    local file="$2"
+    if [ ! -f "${floppy}" ]; then
+        echo "floppy image : [ ${floppy} ] not found!"
     fi
-
-    if [[ ! -e  "$INSTALLER" ]]; then
-        echo -e "ERROR: $INSTALLER not exist."
-        exit 1
+    if [ ! -f "${file}" ]; then
+        echo "to copy file : [ ${file} ] not found!"
     fi
-    
-    GUESTADDITIONS=${GUESTADDITIONS:-"./isos/VBoxGuestAdditions_4.3.10.iso"}
-    if [[ ! -e  "$GUESTADDITIONS" ]]; then
-        echo -e "ERROR: $GUESTADDITIONS not exist."
-        exit 1
-    fi
+    echo mount $floppy ...
+    imdisk -a -f ${floppy} -m x:
+    echo install $file to $floppy
+    cmd //c "copy $(to_win_path $file) x:"
+    echo "umount $floppy ..."
+    imdisk -D -m x:
 }
 
 
-function mount_iso_win(){
+##########################################
+# ISO functions 
+##########################################
+
+function iso_mount_win(){
     #${ISO_MOUNT_PATH:?"not set"}
     ISO_MOUNT_PATH=$(echo $ISO_MOUNT_PATH)
     
@@ -65,7 +43,9 @@ function mount_iso_win(){
 
     if [[ ! -e "${ISO_MOUNT_PATH}" ]]; then
         echo "create ${ISO_MOUNT_PATH}"
-        rmdir ${ISO_MOUNT_PATH} #when -e not work, need to rmdir first
+        if [[ -f "${ISO_MOUNT_PATH}" ]]; then 
+            rmdir ${ISO_MOUNT_PATH} #when -e not work, need to rmdir first
+        fi
         mkdir -p ${ISO_MOUNT_PATH}
     fi
     
@@ -81,7 +61,7 @@ function mount_iso_win(){
     fi
 }
 
-function umount_iso_win() {
+function iso_umount_win() {
     echo "umount ${ISO_MOUNT_PATH}" 
     imdisk -d -m "${ISO_MOUNT_PATH}"
     if [[ -e "${ISO_MOUNT_PATH}" ]]; then
@@ -91,7 +71,11 @@ function umount_iso_win() {
 
 }
 
-function start_tftp_win(){
+##########################################
+# TFTP functions 
+##########################################
+
+function tftp_start_win(){
     # Start TFTPD32
     TFTPD32=tftpd32.exe
     TFTPD32_INI=tftpd32.ini
@@ -103,17 +87,112 @@ function start_tftp_win(){
     start $TFTPD32 -i $TFTPD32_INI
 
 }
-function stop_tftp_win(){
+function tftp_stop_win(){
     tftpd_pid=$(tasklist|grep $TFTPD32|awk '{print $2}')
     echo "Found the tftpd32 is started with pid=$tftpd_pid"
     taskkill //PID $tftpd_pid
 }
 
-function create_vm_vbox(){
+function tftp_folder_prepare(){
+    #TFTP=${1:-"$VBOX_TFTP_DEFAULT"}
+    local tftp_path=${1:-"$TFTP_PATH"}
+    local ks=${2:-"http://$IP:$PORT"}
 
-    VBoxManage createvm --name ${NAME} --ostype ${TYPE} --register
+    if [[ -e "${tftp_path}" ]]; then
+        echo ${tftp_path} exist, clean ${tftp_path}/pxelinux.cfg folder.
+        rm -rf "${tftp_path}/pxelinux.cfg"
+    fi
+    mkdir -p "${tftp_path}/pxelinux.cfg"
+    cp -p pxelinux.0 "${tftp_path}/."
+    create_pxecfg "$NAME" "${tftp_path}/pxelinux.cfg/default" "${ks}"
+}
 
-    # NIC Type includes :  [--nictype<1-N> Am79C970A|Am79C973|82540EM|82543GC|82545EM|virtio]
+function create_pxecfg() {
+    
+    local call=${1:-"NOSET"}
+    local pxecfg_path=${2:-"$TFTP_PATH/pexlinux.cfg/defulat"}
+    local ks=${3:-"http://$IP:$PORT"}
+
+    if [[ "$call" == "NOSET" ]]; then
+        call=${NAME:-"NOSET"}
+        echo call is $call 
+        if [[ "$call" == "NOSET" ]]; then
+            echo -e "ERROR: \$NAME not set."
+            exit 1
+        fi
+    fi
+    create_pxecfg_${call} $pxecfg_path $ks
+}
+
+function create_pxecfg_default() {
+    local cfg_file=${1:-"NOSET"}
+    local ks=${2:-"NOSET"}
+    if [[ $cfg_file == "NOSET" ]]; then
+        echo "pxecfig is not set."
+        exit 1
+    fi
+    if [[ $ks == "NOSET" ]]; then
+        echo "ks is not set."
+        exit 1
+    fi
+cat > $cfg_file << EOL
+default $NAME
+LABEL $NAME
+    KERNEL /$NAME/images/pxeboot/vmlinuz
+    APPEND initrd=/$NAME/images/pxeboot/initrd.img ks=${ks}
+EOL
+}
+
+##########################################
+# VBOX functions 
+##########################################
+
+function vbox_create_vm(){
+    local vm_name="$1"
+    local vm_type="$2"
+    echo Create VM \"${vm_name}\" ... 
+    VBoxManage createvm --name ${vm_name} --ostype ${vm_type} --register
+    case "$vm_type" in
+        RedHat*)
+            vbox_create_vm_redhat "${vm_name}" "${vm_type}" 
+            ;;
+        Ubuntu*)
+            vbox_create_vm_ubuntu "${vm_name}" "${vm_type}"
+            ;;
+        *)
+            vbox_creat_vm_linux_default
+    esac
+
+}
+
+function vbox_create_vm_redhat(){
+    local vm_name="$1"
+    local vm_type="$2"
+    echo vbox_create_vm_redhat VM \"${vm_name}\" TYPE \"${vm_type}\"
+    vbox_creat_vm_linux_default
+}
+function vbox_create_vm_ubuntu(){
+    local vm_name="$1"
+    local vm_type="$2"
+    echo vbox_create_Vm_ubuntu VM \"${vm_name}\" TYPE \"${vm_type}\"
+
+    vbox_creat_vm_linux_default
+    
+    # attach floppy to ubuntu, add a late_command.sh 
+    
+    local floopy="floppy.img"
+    if [[ ! -f "${floopy}" ]]; then
+        floppy_create_${arch} ${floopy}
+    fi
+    if [[ -f "late_command.sh" ]]; then
+        floppy_copy_file_${arch} ${floopy} "late_command.sh"
+    fi
+    vbox_attach_floopy ${vm_name} ${floopy}
+}
+
+
+function vbox_creat_vm_linux_default(){
+     # NIC Type includes :  [--nictype<1-N> Am79C970A|Am79C973|82540EM|82543GC|82545EM|virtio]
     # OS type get from commmand : VBoxMange list ostypes
          
     VBoxManage modifyvm ${NAME} \
@@ -151,30 +230,82 @@ function create_vm_vbox(){
         --storagectl SATA --port 1 --type hdd --medium "${HDD_SWAP}"
     VBoxManage storageattach ${NAME} \
         --storagectl SATA --port 2 --type dvddrive --medium "${INSTALLER}"
-    VBoxManage storageattach ${NAME} \
-        --storagectl SATA --port 3 --type dvddrive --medium "${GUESTADDITIONS}"
+
+}
+
+function vbox_attach_floopy(){
+    local vm_name="$1"
+    local floppy="$2"
+    echo attach \"$floppy\" to VM \"${vm_name}\"
+
+    VBoxManage storagectl ${vm_name} \
+        --name "Floppy" --add floppy
+    VBoxManage storageattach $NAME --storagectl "Floppy" --port 0 --device 0 --type fdd --medium "${floppy}"
 }
 
 
 # Usage:
 # VBoxManage startvm  <uuid|vmname> [--type gui|sdl|headless]
-function start_vm_vbox(){
+function vbox_start_vm(){
+    local vm_name="$1"
+    echo Starting VM \"${vm_name}\" ...
     VBoxManage startvm ${NAME} --type gui
 }
 
 # Usage:
 # VBoxManage controlvm <uuid|vmname> pause|resume|reset|poweroff|savestate|
 #                                    acpipowerbutton|acpisleepbutton|
-function stop_vm_vbox(){
-    VBoxManage controlvm ${NAME} poweroff
+function vbox_stop_vm(){
+    local vm_name="$1"
+    echo Stopping VM \"${vm_name}\" ...
+    VBoxManage controlvm ${vm_name} poweroff
 }
 
 
 # Usage:
 # VBoxManage modifyvm [--natpf<1-N> [<rulename>],tcp|udp,[<hostip>],<hostport>,[<guestip>],<guestport>]
 #                     [--natpf<1-N> delete <rulename>]
-function setup_ssh_vbox(){
-    VBoxManage modifyvm ${NAME} --natpf1 "guestssh,tcp,,2222,,22"
+function vbox_guestssh_setup(){
+    local vm_name="$1"
+    echo Setup ssh service to VM \"${vm_name}\" ...
+    VBoxManage modifyvm ${vm_name} --natpf1 "guestssh,tcp,,2222,,22"
+}
+
+function vbox_guestssh_remove(){
+    local vm_name="$1"
+    echo Remove guest ssh service to VM \"${vm_name}\" ...
+    VBoxManage modifyvm "${vm_name}" --natpf1 delete "guestssh"
+}
+
+function vbox_wait_vm_shutdown() {
+    local vm_name="$1"
+    while VBoxManage list runningvms | grep "${vm_name}" >/dev/null; do
+        sleep 20
+        echo -n "."
+    done
+    echo ""
+}
+# install virtualbox guest additions by using vagrant ssh
+function vbox_install_guestadditions(){
+
+    curl --output vagrant_id_rsa -L "https://raw.github.com/mitchellh/vagrant/master/keys/vagrant"
+    if [[ -f vagrant_id_rsa ]]; then
+        chmod 600 vagrant_id_rsa
+        ssh -i vagrant_id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 2222 vagrant@127.0.0.1 "sudo mount /dev/cdrom /media/cdrom; sudo sh /media/cdrom/VBoxLinuxAdditions.run; sudo umount /media/cdrom; sudo shutdown -h now"
+    fi
+}
+
+function vbox_attach_iso(){
+    local vm_name="$1"
+    local iso="$2"
+    VBoxManage storageattach ${vm_name} \
+        --storagectl SATA --port 2 --type dvddrive --medium "${iso}"
+}
+
+function vbox_detach_iso(){
+    local vm_name="$1"
+    VBoxManage storageattach ${vm_name} \
+        --storagectl SATA --port 2 --type dvddrive --medium emptydrive
 }
 
 
@@ -182,7 +313,7 @@ function setup_ssh_vbox(){
 # The orignal kisckstar is a web service set up in host machine, when guest boot
 # ks=http://10.0.2.3:8088 will be called. 
 # The way is not work for ubuntu linux, use floopy image with ks file installed instead
-function setup_kickstart_service(){
+function start_kickstart_service(){
     local ip=${1:-$IP}
     local port=${2:-$PORT} #default is 8088
     local cfg=${3:-$KS_CFG} #default is ks.cfg
@@ -191,80 +322,7 @@ function setup_kickstart_service(){
     sh ./httpd.sh ${cfg} | nc -l -p ${port} > /dev/null
  }
 
-function setup_tftp_folder(){
-    #TFTP=${1:-"$VBOX_TFTP_DEFAULT"}
-    local tftp_path=${1:-"$TFTP_PATH"}
-    local ks=${2:-"http://$IP:$PORT"}
-
-    if [[ -e "${tftp_path}" ]]; then
-        echo ${tftp_path} exist, clean ${tftp_path}/pxelinux.cfg folder.
-        rm -rf "${tftp_path}/pxelinux.cfg"
-    fi
-    mkdir -p "${tftp_path}/pxelinux.cfg"
-    cp -p pxelinux.0 "${tftp_path}/."
-    create_pxecfg "$NAME" "${tftp_path}/pxelinux.cfg/default" "${ks}"
-}
-
-function create_pxecfg() {
-    
-    local call=${1:-"NOSET"}
-    local pxecfg_path=${2:-"$TFTP_PATH/pexlinux.cfg/defulat"}
-    local ks=${3:-"http://$IP:$PORT"}
-
-    if [[ "$call" == "NOSET" ]]; then
-        call=${NAME:-"NOSET"}
-        echo call is $call 
-        if [[ "$call" == "NOSET" ]]; then
-            echo -e "ERROR: \$NAME not set."
-            exit 1
-        fi
-    fi
-    create_pxecfg_${call} $pxecfg_path $ks
-}
-
-function create_pxecfg_centos6() {
-    local cfg_file=${1:-"NOSET"}
-    local ks=${2:-"NOSET"}
-    if [[ $cfg_file == "NOSET" ]]; then
-        echo "pxecfig is not set."
-        exit 1
-    fi
-    if [[ $ks == "NOSET" ]]; then
-        echo "ks is not set."
-        exit 1
-    fi
-cat > $cfg_file << EOL
-default $NAME
-LABEL $NAME
-    KERNEL /$NAME/images/pxeboot/vmlinuz
-    APPEND initrd=/$NAME/images/pxeboot/initrd.img ks=${ks}
-EOL
-}
 
 
-function create_floppy_image_win(){
-    local floppy="$1"
-    echo "creating $floppy and format"
-    imdisk -a -f ${floppy} -s 1440K -m x: && cmd //C "format x: /Q"
-    echo "umount $floppy"
-    imdisk -D -m x:
-}
 
-function copy_file_to_floppy_image() {
-    local floppy="$1"
-    local file="$2"
-    if [ ! -f "${floppy}" ]; then
-        echo "floppy image : [ ${floppy} ] not found!"
-        exit 0
-    fi
-    if [ ! -f "${file}" ]; then
-        echo "to copy file : [ ${file} ] not found!"
-        exit 0
-    fi
-    echo mount $floppy ...
-    imdisk -a -f ${floppy} -m x:
-    echo install $file to $floppy
-    cmd //c "copy $(to_win_path $file) x:"
-    echo "umount $floppy ..."
-    imdisk -D -m x:
-}
+

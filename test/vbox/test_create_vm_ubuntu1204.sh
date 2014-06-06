@@ -5,7 +5,7 @@
 #
 function main(){
     NAME=ubuntu-12.04.4-alternate-i386
-    TYPE=Ubuntu_32
+    TYPE=Ubuntu
     INSTALLER="/d/ISO/ubuntu/12.04/ubuntu-12.04.4-alternate-i386.iso"
     GUESTADDITIONS="/c/Program Files/Oracle/VirtualBox/VBoxGuestAdditions.iso"
     KS_CFG="ks_centos.cfg"

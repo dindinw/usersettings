@@ -5,3 +5,5 @@ TempWmicBatchFile.bat
 *.au3
 tweak_xp.exe
 bcdboot.exe
+vagrant_id_rsa
+floppy.img
