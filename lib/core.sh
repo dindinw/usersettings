@@ -23,6 +23,35 @@ function currentDir()
     echo $DIR
 }
 
+function _7z_extract()
+{
+    local archive_name="$1"
+    local extract_file_name="$2"
+    local output_dir="$3"
+    7z e $archive_name $extract_file_name -o$output_dir -y #2>&1>/dev/null
+}
+
+function _7z_archive()
+{
+    local archive_name="$1"
+    local file_names="$2"
+    7z a archive_name "$file_names/*"
+}
+
+function tar_win(){
+    local archive_name="$1"
+    local file_names="$2"
+    7z a -ttar "$archive_name" "$file_names/*" 
+}
+
+function to_unix_path(){
+    if [ -z "$1" ]; then
+        echo "$@"
+    else
+        echo "/$1" | sed 's/\\/\//g' | sed 's/://'
+    fi
+}
+
 # /foo/bar -> \foo\bar
 function to_win_path(){
     if [ -z "$1" ]; then

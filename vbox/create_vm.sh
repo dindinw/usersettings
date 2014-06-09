@@ -95,6 +95,9 @@ function main_template(){
     tftp_stop_$arch
     iso_umount_$arch
 
+    # detach floopy
+    vbox_detach_floopy
+
     echo "Waiting for OS installion for VM \"${NAME}\" to finish ..."
     vbox_wait_vm_shutdown ${NAME}
 

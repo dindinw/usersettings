@@ -246,6 +246,12 @@ function vbox_attach_floopy(){
     VBoxManage storageattach $NAME --storagectl "Floppy" --port 0 --device 0 --type fdd --medium "${floppy}"
 }
 
+function vbox_detach_floopy(){
+    local vm_name="$1"
+    echo detach floppy from VM \"${vm_name}\"
+    VBoxManage storageattach $NAME --storagectl "Floppy" --port 0 --device 0 --type fdd --medium emptydrive
+}
+
 
 # Usage:
 # VBoxManage startvm  <uuid|vmname> [--type gui|sdl|headless]
@@ -310,6 +316,25 @@ function vbox_detach_iso(){
     VBoxManage storageattach ${vm_name} \
         --storagectl SATA --port 2 --type dvddrive --medium emptydrive
 }
+
+function vbox_export_vm(){
+    local vm_name="$1"
+    local box="$2"
+    local boxname=$(basename $(to_unix_path $box))
+    local dirname=$(dirname $(to_unix_path $box))
+    if [[ -z "$boxname" ]] || [[ -z "$dirname" ]]; then exit; fi
+    mkdir -p $box
+    echo "export VM \"${vm_name}\" to \"${box}\"..."
+    VBoxManage export ${vm_name} --output $box/$boxname".ovf"
+    tar_win "${box}.box" "${box}"
+    rm -rf "${box}"
+}
+
+function vbox_list_vm(){
+    Vboxmanage list vms
+}
+
+
 
 
 # NOT_IN_USE
