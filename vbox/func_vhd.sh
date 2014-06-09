@@ -29,10 +29,36 @@ function wim_apply()
     local wim_file="$1"
     local img_index="$2"
     local apply_to="$3"
+    local imagex_exe="/c/windows/setup/Scripts/imagex.exe"
+    if [[ -f "$imagex_exe" ]]; then
+        # You may need to downlaod it from http://hotfixv4.microsoft.com/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix363073/7600/free/430546_intl_x64_zip.exe
+        wim_apply_imagex ${wim_file} ${img_index} ${apply_to}
+    else
+        # The default version 6.1.7600.16385, may got error 87 for unknown option Apply-Image. need to download AIK (1.7G+)
+        wim_apply_dism ${wim_file} ${img_index} ${apply_to}
+    fi
+}
+
+function wim_apply_imagex()
+{
+    local wim_file="$1"
+    local img_index="$2"
+    local apply_to="$3"
     local imagex_cmd="c:\Windows\Setup\Scripts\imagex /apply $(to_win_path $wim_file) ${img_index} $(to_win_path $apply_to) /check /verify && exit"
     echo excuting ${imagex_cmd} ...
     start //wait cmd //k "$imagex_cmd"
 }
+
+function wim_apply_dism()
+{
+    local wim_file="$1"
+    local img_index="$2"
+    local apply_to="$3"
+    local dism_cmd="dism /Apply-Image /ImageFile:$(to_win_path $wim_file) /index:${img_index} /ApplyDir:$(to_win_path $apply_to) && exit"
+    echo excuting ${dism_cmd} ...
+    start //wait cmd //k "$dism_cmd"
+}
+
 
 # using diskpart to do this
 function vhd_create()
