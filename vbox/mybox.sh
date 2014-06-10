@@ -5,13 +5,13 @@ DIR="$( cd "$( dirname "${BASH_SOURCE}" )" && pwd)"
 
 me=`basename $0`
 
-BOXCONF_DEFAULT="./.boxconfig"
+BOXCONF_DEFAULT=".boxconfig"
 
 function _check_home()
 {
     if [ -z "${MYBOX_HOME}" ] ; then
         MYBOX_HOME="D:\Boxes"
-        echo "WARNING: env \"MYBOX_HOME\" not set! using Default \"${MYBOX_HOME}\""
+        echo "WARNING: env \"MYBOX_HOME\" not set! using default path under \"${MYBOX_HOME}\""
     fi
     if [ ! -e "${MYBOX_HOME}" ]; then
         echo "ERROR: MYBOX_HOME=\"{MYBOX_HOME}\" not exist, exit"
@@ -19,7 +19,7 @@ function _check_home()
     fi
     if [ -z "${VBOX_HOME}"] ; then
         VBOX_HOME="${HOME}/VirtualBox VMs"
-        echo "WARNING: env \"VBOX_HOME\" not set! using Default \"${VBOX_HOME}\""
+        echo "WARNING: env \"VBOX_HOME\" not set! using default path under \"${VBOX_HOME}\""
     fi
     if [ ! -e "${VBOX_HOME}" ]; then
         echo "ERROR: VBOX_HOME=\"{VBOX_HOME}\" not exist, exit"
@@ -54,6 +54,10 @@ function _err_vm_exist(){
 
 function _err_not_null(){
     echo "Error : \"$1\" should not be null"
+}
+function _err_boxconf_exist_when_init(){
+    echo "Error : \"$BOXCONF_DEFAULT\" already exists in this directory."
+    echo "        Remove it before running \"$me init\"."
 }
 
 function _confirm(){
@@ -97,9 +101,38 @@ function _check_box_conf(){
 # init a box config by box-template
 function init()
 {
-    local box = "$1"
-    echo "init a box config by a box-template"
+    local box="$1"
 
+    if [[ -z ${box} ]] ; then box="UnknownBox"; fi;
+
+    if [ "$#" -gt 1 ] ; then 
+        usage_init
+        exit 0
+    fi
+
+    if [[ -e "$BOXCONF_DEFAULT" ]]; then
+        _err_boxconf_exist_when_init
+        exit 0
+    fi
+
+cat <<EOF > "$BOXCONF_DEFAULT"
+    # box config 
+[box] 
+    box=${box}
+    
+    node.name=mybox_%uuid%_
+    vbox.modifyvm.memory=512
+# node
+[node 1]
+    vbox.modifyvm.name="another_name_node1"
+    vbox.modifyvm.memory=1024
+    vbox.modifyvm.nictype1="82540EM"
+
+[node 2]
+    box=REHL64
+    vbox.modifyvm.memory=2048
+EOF
+    echo "Init a box config under `currentDir`/$BOXCONF_DEFAULT successfully!"
 }
 
 
@@ -228,7 +261,9 @@ function start_vm()
         exit; 
     fi  
     echo start VM \"${vm_name}\" ...
-    vbox_start_vm ${vm_name} "headless"
+    vbox_guestssh_setup ${vm_name} 2300
+    vbox_start_vm ${vm_name} #"headless"
+
 
 }
 
@@ -311,9 +346,11 @@ function usage()
     for cmd in "package" "list" "start" 
     do usage_$cmd; done
 }
-
+function usage_ini(){
+    _print_usage "init [box_name]"
+}
 function usage_package(){
-    _print_usage "package <BOXNAME>"
+    _print_usage "package <box_name> [vm_name]"
 }
 
 function usage_start()
@@ -344,6 +381,10 @@ function main(){
     local opts=$@
     #echo inputs : $opts
     case $cmd in
+            init*)
+                shift
+                init "$@"
+                ;;
             package*)
                 shift
                 package "$@"

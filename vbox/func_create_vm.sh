@@ -281,8 +281,10 @@ function vbox_stop_vm(){
 #                     [--natpf<1-N> delete <rulename>]
 function vbox_guestssh_setup(){
     local vm_name="$1"
+    local port="$2"
+    if [[ -z "$port" ]]; then port=2222; fi;
     echo Setup ssh service to VM \"${vm_name}\" ...
-    VBoxManage modifyvm ${vm_name} --natpf1 "guestssh,tcp,,2222,,22"
+    VBoxManage modifyvm ${vm_name} --natpf1 "guestssh,tcp,,${port},,22"
 }
 
 function vbox_guestssh_remove(){
@@ -347,9 +349,9 @@ function vbox_import_vm(){
     if [[ ! -z ${opt} ]]; then
         echo "DEBUG: The Vbox Import OPTS : [ $opt ]"
     fi
-    eval Vboxmanage import ${boxfile} ${opt} --dry-run
+    eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs --dry-run
     if [[ $(_confirm "are your sure to import ") ]]; then
-        eval Vboxmanage import ${boxfile} ${opt} 
+        eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs
     fi
 }
 
