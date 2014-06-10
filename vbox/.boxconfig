@@ -1,0 +1,14 @@
+# box config 
+[box] 
+    box=Precise64
+    node.name=node-%date%-%index%
+    node.number=5
+    modifyvm.memory=512
+# node
+[node 1]
+    modifyvm.memory=1024
+    modifyvm.name="another_name_node1"
+    modifyvm.nictype1="82540EM"
+
+[node 2]
+    modifyvm.memory=2048

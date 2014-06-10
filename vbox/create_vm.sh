@@ -2,18 +2,6 @@
 . ../lib/core.sh
 . ./func_create_vm.sh
 
-function host_arch_setup() 
-{
-    if [[ $OS == "UNKNOWN" ]]; then echo ERROR; exit -1; fi
-    if [[ "$OS" == "$OS_LINUX" ]]; then
-        readonly arch="linux"
-    elif [[ "$OS" == "$OS_MAC" ]]; then
-        readonly arch="mac"
-    elif [[ "$OS" == "$OS_WIN" ]]; then
-        readonly arch="win"
-    fi
-}
-
 function setup_vars() 
 {
     NAME=${NAME:-"NOSET"}
@@ -72,8 +60,7 @@ function check_vars(){
 
 function main_template(){
     
-    # prepare arch and vars
-    host_arch_setup
+    # prepare vars
     setup_vars 
 
     # prepare tftp and start

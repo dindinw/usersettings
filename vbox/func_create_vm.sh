@@ -257,8 +257,13 @@ function vbox_detach_floopy(){
 # VBoxManage startvm  <uuid|vmname> [--type gui|sdl|headless]
 function vbox_start_vm(){
     local vm_name="$1"
+    local s_type="$2"
+    if [[ -z "$s_type" ]]; then
+        #default is GUI
+        s_type=gui
+    fi
     echo Starting VM \"${vm_name}\" ...
-    VBoxManage startvm ${NAME} --type gui
+    VBoxManage startvm ${vm_name} --type ${s_type}
 }
 
 # Usage:
@@ -320,14 +325,32 @@ function vbox_detach_iso(){
 function vbox_export_vm(){
     local vm_name="$1"
     local box="$2"
-    local boxname=$(basename $(to_unix_path $box))
-    local dirname=$(dirname $(to_unix_path $box))
-    if [[ -z "$boxname" ]] || [[ -z "$dirname" ]]; then exit; fi
-    mkdir -p $box
     echo "export VM \"${vm_name}\" to \"${box}\"..."
-    VBoxManage export ${vm_name} --output $box/$boxname".ovf"
-    tar_win "${box}.box" "${box}"
-    rm -rf "${box}"
+    VBoxManage export ${vm_name} --output ${box}".ovf"
+}
+
+function vbox_import_vm(){
+    local box="$1"
+    local boxfile="${box}.ovf"
+    local vm_name="$2"
+    if [[ ! -z ${vm_name} ]];then 
+        local opt="--vsys 0 --vmname $vm_name"
+        IFS=$'\n'
+        local count=1
+        for disk in $(Vboxmanage import ${boxfile} --dry-run 2>&1|grep "disk path"|awk -F "\"" '{print $2}'|sed s'/--vsys 0//'|sed s'/ path//')
+        do 
+            opt="$opt $disk \"${VBOX_HOME}/$vm_name/disk$count.vmdk\""
+            let count=count+1
+        done
+        unset IFS
+    fi
+    if [[ ! -z ${opt} ]]; then
+        echo "DEBUG: The Vbox Import OPTS : [ $opt ]"
+    fi
+    eval Vboxmanage import ${boxfile} ${opt} --dry-run
+    if [[ $(_confirm "are your sure to import ") ]]; then
+        eval Vboxmanage import ${boxfile} ${opt} 
+    fi
 }
 
 function vbox_list_vm(){

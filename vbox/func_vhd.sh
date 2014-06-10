@@ -4,7 +4,7 @@ function extract_bootwim()
 {
     local iso="$1"
     local output_dir="$2"
-    7z_extract $iso "sources/boot.wim" $output_dir
+    _7z_extract $iso "sources/boot.wim" $output_dir
 
 }
 
@@ -12,17 +12,8 @@ function extract_installwim()
 {
     local iso="$1"
     local output_dir="$2"
-    7z_extract $iso "sources/install.wim" $output_dir
+    _7z_extract $iso "sources/install.wim" $output_dir
 }
-
-function 7z_extract() 
-{
-    local archive_name="$1"
-    local extract_file_name="$2"
-    local output_dir="$3"
-    7z e $archive_name $extract_file_name -o$output_dir -y #2>&1>/dev/null
-}
-
 
 function wim_apply()
 {

@@ -44,6 +44,19 @@ function tar_win(){
     7z a -ttar "$archive_name" "$file_names/*" 
 }
 
+function untar_win(){
+    local archive_name="$1"
+    local output_dir="$2"
+    7z e $archive_name "*" -o$output_dir
+}
+
+function extract_win(){
+    local archive_name="$1"
+    local extract_file_name="$2"
+    local output_dir="$3"
+    _7z_extract $archive_name $extract_file_name $output_dir
+}
+
 function to_unix_path(){
     if [ -z "$1" ]; then
         echo "$@"
@@ -129,7 +142,7 @@ FILE_EXT_WIN=".exe"
 FILE_EXT="UNKNOWN"
 
 function ostype()
- {
+{
     OS=$(uname)
     MACH=$(uname -m)
 
@@ -169,7 +182,21 @@ function ostype()
         exit -1
     fi
 }
+
+function host_arch_setup() 
+{
+    if [[ $OS == "UNKNOWN" ]]; then echo ERROR; exit -1; fi
+    if [[ "$OS" == "$OS_LINUX" ]]; then
+        readonly arch="linux"
+    elif [[ "$OS" == "$OS_MAC" ]]; then
+        readonly arch="mac"
+    elif [[ "$OS" == "$OS_WIN" ]]; then
+        readonly arch="win"
+    fi
+}
+
 ostype
+host_arch_setup
 clean_wmi_tmp_file
 
 if [[ "$OS" == "$OS_WIN" ]]; then
