@@ -5,9 +5,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE}" )" && pwd)"
 
 me=`basename $0`
 
-readonly ${BOXCONF:=.boxconfig}
-readonly ${BOXFOLDER:=.mybox}
-
+readonly BOXCONF=".boxconfig"
+readonly BOXFOLDER=".mybox"
 readonly MYBOX="mybox"
 readonly DEFAULT_NODE="default_node"
 
@@ -48,6 +47,11 @@ function _err_file_not_found()
     echo "Error : File \"$1\" not found" 
 }
 
+function _err_box_not_found()
+{
+    echo "Error : Box \"$1\" not found"
+}
+
 function _err_vm_not_found(){
     echo "Error : VM \"$1\" not found"
 }
@@ -72,10 +76,10 @@ function _confirm(){
     read -r -p "$msg?[yes/no]" confirm
     case "${confirm}" in 
         [yY][eE][sS]|[yY])
-            echo 0
+            return 0
             ;;
         *)
-            echo 1
+            return 1
             ;;
     esac
 }
@@ -84,15 +88,52 @@ function _print_usage(){
     echo Usage : $me $1 
 }
 
-function _check_vm_exist(){
-    local vm_name="$1"
-    list_vms|grep ^\"$vm_name\"
-    if [ $? -eq 0 ];then
-        echo "$vm_name exist"
-        return 1
-    fi
-    return 0
+function _check_box_exist(){
+    list_boxes|grep ^"$1"$
+    return $?
 }
+function _check_vm_exist(){
+    if _check_vm_exist_by_name "$1"; then
+        return 0
+    fi
+    if _check_vm_exist_by_id "$1"; then
+        return 0
+    fi
+    return 1
+}
+function _check_vm_exist_by_name(){
+    local vm_name="$1"
+    list_vms|grep ^\"$vm_name\" > /dev/null
+    if [ $? -eq 0 ]; then return 0; else return 1; fi
+
+}
+function _check_vm_exist_by_id(){
+    local vm_id="$1"
+    list_vms|grep \{$vm_id\}$ >/dev/null
+    if [ $? -eq 0 ]; then return 0; else return 1; fi
+}
+
+function _check_vm_running(){
+    if _check_vm_running_by_name "$1"; then
+        return 0
+    fi
+    if _check_vm_running_by_id "$1"; then
+        return 0
+    fi
+    return 1
+}
+function _check_vm_running_by_name(){
+    local vm_name="$1"
+    list_running_vms|grep ^\"$vm_name\" >/dev/null
+    if [ $? -eq 0 ]; then return 0; else return 1; fi
+
+}
+function _check_vm_running_by_id(){
+    local vm_id="$1"
+    list_running_vms|grep \{$vm_id\}$ >/dev/null
+    if [ $? -eq 0 ]; then return 0; else return 1; fi
+}
+
 function _check_box_conf(){
     if [[ ! -f ${BOXCONF} ]]; then
         _err_file_not_found ${BOXCONF}
@@ -105,6 +146,7 @@ function _check_box_folder(){
         mkdir -p $BOXFOLDER
     fi
 }
+
 
 ######################
 # STATUS
@@ -180,7 +222,7 @@ function package()
     fi
 
     if [[ -f ${box}".box" ]]; then
-        if [[ $(_confirm "WARNING: BOX named \"$2\" already exist, Do you want to overwrite it") -eq 0 ]] ; then
+        if _confirm "WARNING: BOX named \"$2\" already exist, Do you want to overwrite it"; then
             rm ${box}".box"
         else
             exit
@@ -202,39 +244,55 @@ function import(){
     local box="${MYBOX_HOME}/${boxname}.box"
     local node_name="$2"
     if [ ! -e "${box}" ]; then
-        _err_file_not_found "${box}"
+        _err_box_not_found "${boxname}"
+        exit 1
     fi
     local vm_name=$(_build_uni_vm_name $node_name)
 
-    echo "import \"${box}\" "
     if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
         mkdir -p "${MYBOX_HOME}/${boxname}"
         untar_win "${box}" "${MYBOX_HOME}/${boxname}"
     fi
-    local 
-    vbox_import_vm ${MYBOX_HOME}/${boxname}/${boxname} $vm_name
+
+    echo "Import MYBOX \"${boxname}\" into VBOX VM \"${vm_name}\""
+
+    vbox_import_vm "${MYBOX_HOME}/${boxname}/${boxname}" "$vm_name"
 
     if [ "$?" -eq 0 ]; then
-        local vm_id=$(list_vms|grep ^\"$vm_name\")
-        local id_file=$(_get_mybox_node_path $node_name)
-        local id_dir=$(dirname "${id_file}")
-        echo $id_dir
-        if [[ ! -e "$id_dir" ]]; then mkdir -p "${id_dir}" ; fi;
-        echo "$vm_id" > $id_file
+        _set_vm_id_to_myboxfolder $vm_name $node_name
     else
-        echo "Error : import $@"
-        exit 0
+        echo "Error : Import \"${boxname}\" into VBOX VM \"${vm_name}\" failed! Exit."
+        exit 1
     fi
 }
 
-function _build_uni_vm_name(){
+function _set_vm_id_to_myboxfolder(){
+    
+    local vm_name="$1"
+    local node_name="$2"
+
+    local vm_id=$(list_vms|grep ^\"$vm_name\")
+
+    local id_file=$(_get_mybox_node_path $node_name)
+
+    local id_dir=$(dirname "${id_file}")
+
+    #echo $id_dir
+    if [[ ! -e "$id_dir" ]]; then mkdir -p "${id_dir}" ; fi;
+    echo "$vm_id" > $id_file
+}
+
+function _get_vm_id_from_myboxfolder(){
+    
     local node_name="$1"
-    if [ -z $node_name ]; then
-        node_name="${MYBOX}_${DEFAULT_NODE}"
-    else
-        node_name="${MYBOX}_${node_name}"
-    fi
-    echo "${node_name}_$(uuid)"
+    local id_file="$(_get_mybox_node_path $node_name)"    
+    local vm_id=""
+
+    if [[ -f "${id_file}" ]]; then 
+        vm_id="$(cat "$id_file"|awk '{print $2}'|sed s'/{//'|sed s'/}//')"
+    fi;
+
+    echo $vm_id
 }
 
 # "$BOXFOLDER/nodes/$node_name/vbox/id"
@@ -246,17 +304,38 @@ function _get_mybox_node_path(){
     echo "${BOXFOLDER}/nodes/${node_name}/vbox/id"
 }
 
+
+function _build_uni_vm_name(){
+    local node_name="$1"
+    if [ -z $node_name ]; then
+        node_name="${MYBOX}_${DEFAULT_NODE}"
+    else
+        node_name="${MYBOX}_${node_name}"
+    fi
+    echo "${node_name}_$(uuid)"
+}
+
+
+
 ######################
 # LIST
 ######################
 # list all box template
 function list(){
-    case "$1" in
+    case "$@" in
         vms)
-            list_vms
+            list_vms "$@"
             ;;
         boxes)
             list_boxes
+            ;;
+        boxes*)
+            shift
+            if [[ "$1" == "--detail" ]]; then
+                show_box_detail
+            else
+                usage_list
+            fi
             ;;
         *)
             usage_list
@@ -265,25 +344,33 @@ function list(){
 }
 function list_boxes()
 {
-    echo "List boxes ..."
+    pushd ${MYBOX_HOME} > /dev/null
+    for f in $(ls -m1 *.box); do basename $f .box; done;
+    popd > /dev/null
+}
+
+function show_box_detail(){
     for box in $(find ${MYBOX_HOME} -type f -name "*.box")
     do
-        show_box $box
+        local boxname=$(basename $(to_unix_path $box) .box)
+        echo 
+        echo "====================================================================="
+        echo "BOX NAME: $boxname"
+        echo "---------------------------------------------------------------------"
+        extract_win "${box}" "${boxname}.ovf" "${MYBOX_HOME}" > /dev/null
+        cat "${MYBOX_HOME}/${boxname}.ovf" |grep "vbox:Machine"
+        rm "${MYBOX_HOME}/${boxname}.ovf"
     done
 }
-function show_box(){
-    local box="$1"
-    local boxname=$(basename $(to_unix_path $box) .box)
-    echo 
-    echo "====================================================================="
-    echo "BOX NAME: $boxname"
-    echo "---------------------------------------------------------------------"
-    extract_win "${box}" "${boxname}.ovf" "${MYBOX_HOME}" > /dev/null
-    cat "${MYBOX_HOME}/${boxname}.ovf" |grep "vbox:Machine"
-    rm "${MYBOX_HOME}/${boxname}.ovf"
-}
+
+
+
 function list_vms(){
     vbox_list_vm
+}
+
+function list_running_vms(){
+    vbox_list_running_vms
 }
 
 
@@ -317,35 +404,38 @@ function start_vm()
         _err_not_null "vm_name"
         exit
     fi
-    if [[ ! $(_check_vm_exist "$vm_name") ]]; then
+    if ! _check_vm_exist "$vm_name"; then
         _err_vm_not_found $vm_name
-        exit; 
-    fi  
-    echo start VM \"${vm_name}\" ...
-    vbox_guestssh_setup ${vm_name} 2300
-    vbox_start_vm ${vm_name} #"headless"
-
+        return 1; 
+    fi
+    if _check_vm_running "$vm_name"; then
+        echo "VBox VM \"$vm_name\" is already started!"
+        return 1;
+    fi
+    vbox_start_vm ${vm_name} "headless"
 
 }
+
 # Path like this ./.mybox/nodes/<node_name>/vbox/id
 function start_node(){
     local node_name="$1"
     local box_name="$2"
-    local id_file="$(_get_mybox_node_path $node_name)"
-    local vm_id=""
-
-    if [[ -f "${id_file}" ]]; then 
-        vm_id="$(cat "$id_file"|awk '{print $2}'|sed s'/{//'|sed s'/}//')"
-    fi;
+    local vm_id=$(_get_vm_id_from_myboxfolder $node_name)
 
     if [[ ! -z "${vm_id}" ]]; then
-        start_vm ${vm_id}
-    else
-        if [[ -z "$box_name" ]];then
-            echo "BOX name is not set, can't do import. exit"
-            exit 1
+        echo "Start MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
+        if _check_vm_exist_by_id $vm_id; then
+            start_vm ${vm_id}
+            if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" started OK!"; fi
+            return $?
         fi
-        import "$box_name" "$node_name"
+    fi
+    if [[ -z "$box_name" ]];then
+        echo "BOX name is not set, can't do import. exit"
+        exit 1
+    fi
+    import "$box_name" "$node_name"
+    if [[ $? -eq 0 ]]; then #import ok
         start_node "$node_name" "$box_name"
     fi
 }
@@ -373,8 +463,6 @@ function _read_box_conf(){
 }
 
 
-
-
 ######################
 # STOP
 ######################
@@ -384,6 +472,10 @@ function stop()
         vm*)
             shift
             stop_vm $@
+            ;;
+        node*)
+            shift
+            stop_node $@
             ;;
         ""|-d|-D)
             shift
@@ -401,18 +493,39 @@ function stop_vm()
         _err_not_null "vm_name"
         exit
     fi
-    if [[ ! $(_check_vm_exist "$vm_name") ]]; then
+    if ! _check_vm_exist "$vm_name"; then
         _err_vm_not_found $vm_name
         exit; 
     fi  
-    echo stop VM \"${vm_name}\" ...
+    echo stop VBOX VM \"${vm_name}\" ...
     vbox_stop_vm "$vm_name"
+}
+
+function stop_node()
+{
+    local node_name="$1"
+    local vm_id=$(_get_vm_id_from_myboxfolder $node_name)
+    if [[ ! -z "${vm_id}" ]]; then
+        echo "Stopping MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
+        if _check_vm_exist_by_id $vm_id; then
+            if _check_vm_running_by_id $vm_id; then
+                stop_vm ${vm_id}
+                if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" stopped OK!"; fi
+                return $?
+            else
+                echo "MYBOX Node \"$node_name\" is not running!"
+                return 1
+            fi
+        fi
+    fi
+    echo "MYBOX Node \"$node_name\" not found!"
+    return 1
 }
 
 function stop_boxes()
 {
     _check_status
-    echo stop BOXes using \"${boxconf}\" ...
+    echo stop BOXes ...
 }
 
 
@@ -430,6 +543,14 @@ function remove_box()
     echo remove BOX \"${box}\" ...
 }
 
+######################
+# MODIFY
+######################
+function modify_vm(){
+    local vm_name="$1"
+    echo modify VM \"${vm_name}\" ...
+    # vbox_guestssh_setup ${vm_name} 2300
+}
 
 ######################
 # USAGE
@@ -462,6 +583,7 @@ function usage_stop()
 }
 function usage_list(){
     _print_usage "list boxes"
+    _print_usage "list boxes --detail"
     _print_usage "list vms"
 }
 

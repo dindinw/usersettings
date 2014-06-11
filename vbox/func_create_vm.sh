@@ -262,7 +262,7 @@ function vbox_start_vm(){
         #default is GUI
         s_type=gui
     fi
-    echo Starting VM \"${vm_name}\" ...
+    echo "Try to start VBox VM \"${vm_name}\" in \"${s_type}\" mode ..."
     VBoxManage startvm ${vm_name} --type ${s_type}
 }
 
@@ -271,7 +271,7 @@ function vbox_start_vm(){
 #                                    acpipowerbutton|acpisleepbutton|
 function vbox_stop_vm(){
     local vm_name="$1"
-    echo Stopping VM \"${vm_name}\" ...
+    echo Stopping VBOX VM \"${vm_name}\" ...
     VBoxManage controlvm ${vm_name} poweroff
 }
 
@@ -346,17 +346,27 @@ function vbox_import_vm(){
         done
         unset IFS
     fi
-    if [[ ! -z ${opt} ]]; then
+    if [[ ! -z ${opt} ]] && [[ ! -z "$DEBUG" ]]; then
         echo "DEBUG: The Vbox Import OPTS : [ $opt ]"
     fi
-    eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs --dry-run
-    if [[ $(_confirm "are your sure to import ") ]]; then
-        eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs
+    if [[ ! -z "$3" ]] && [[ "$3" == "--confirm" ]]; then
+        eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs --dry-run
+        if _confirm "are your sure to import "; then
+            eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs
+        else
+            return 1 #no import
+        fi
+    else
+        eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs > /dev/null
     fi
 }
 
 function vbox_list_vm(){
     Vboxmanage list vms
+}
+
+function vbox_list_running_vms(){
+    VBoxManage list runningvms
 }
 
 
