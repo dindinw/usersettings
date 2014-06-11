@@ -5,7 +5,11 @@ DIR="$( cd "$( dirname "${BASH_SOURCE}" )" && pwd)"
 
 me=`basename $0`
 
-BOXCONF_DEFAULT=".boxconfig"
+readonly ${BOXCONF:=.boxconfig}
+readonly ${BOXFOLDER:=.mybox}
+
+readonly MYBOX="mybox"
+readonly DEFAULT_NODE="default_node"
 
 function _check_home()
 {
@@ -56,8 +60,11 @@ function _err_not_null(){
     echo "Error : \"$1\" should not be null"
 }
 function _err_boxconf_exist_when_init(){
-    echo "Error : \"$BOXCONF_DEFAULT\" already exists in this directory."
+    echo "Error : \"$BOXCONF\" already exists in this directory."
     echo "        Remove it before running \"$me init\"."
+}
+function _err_box_folder_not_found(){
+    echo "Error : $BOXFOLDER is not found in this directory. need to redo \"$me init\"."
 }
 
 function _confirm(){
@@ -87,11 +94,30 @@ function _check_vm_exist(){
     return 0
 }
 function _check_box_conf(){
-    local boxconf="$1"
-    if [[ ! -e $boxconf ]]; then
-        _err_file_not_found $boxconf
+    if [[ ! -f ${BOXCONF} ]]; then
+        _err_file_not_found ${BOXCONF}
         exit 0
     fi
+}
+function _check_box_folder(){
+    # build $BOXFOLDER if not exist
+    if [[ ! -d $BOXFOLDER ]]; then
+        mkdir -p $BOXFOLDER
+    fi
+}
+
+######################
+# STATUS
+######################
+function status()
+{
+    _check_status
+
+}
+
+function _check_status(){
+    _check_box_conf
+    _check_box_folder
 }
 
 
@@ -109,18 +135,19 @@ function init()
         usage_init
         exit 0
     fi
+    _check_box_folder #create box folder if not created
 
-    if [[ -e "$BOXCONF_DEFAULT" ]]; then
+    if [[ -e "$BOXCONF" ]]; then
         _err_boxconf_exist_when_init
         exit 0
     fi
 
-cat <<EOF > "$BOXCONF_DEFAULT"
+cat <<EOF > "$BOXCONF"
     # box config 
 [box] 
     box=${box}
     
-    node.name=mybox_%uuid%_
+    node.name=${MYBOX}_${DEFAULT_NODE}
     vbox.modifyvm.memory=512
 # node
 [node 1]
@@ -132,7 +159,7 @@ cat <<EOF > "$BOXCONF_DEFAULT"
     box=REHL64
     vbox.modifyvm.memory=2048
 EOF
-    echo "Init a box config under `currentDir`/$BOXCONF_DEFAULT successfully!"
+    echo "Init a box config under `currentDir`/$BOXCONF successfully!"
 }
 
 
@@ -173,20 +200,50 @@ function package()
 function import(){
     local boxname="$1"
     local box="${MYBOX_HOME}/${boxname}.box"
-    local vm_name="$2"
+    local node_name="$2"
     if [ ! -e "${box}" ]; then
         _err_file_not_found "${box}"
     fi
-    if [[ ! -z "$vm_name" ]] && [[ $(_check_vm_exist "$vm_name") ]]; then
-        _err_vm_exist $vm_name
-        exit 0
-    fi
+    local vm_name=$(_build_uni_vm_name $node_name)
+
     echo "import \"${box}\" "
     if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
         mkdir -p "${MYBOX_HOME}/${boxname}"
         untar_win "${box}" "${MYBOX_HOME}/${boxname}"
     fi
+    local 
     vbox_import_vm ${MYBOX_HOME}/${boxname}/${boxname} $vm_name
+
+    if [ "$?" -eq 0 ]; then
+        local vm_id=$(list_vms|grep ^\"$vm_name\")
+        local id_file=$(_get_mybox_node_path $node_name)
+        local id_dir=$(dirname "${id_file}")
+        echo $id_dir
+        if [[ ! -e "$id_dir" ]]; then mkdir -p "${id_dir}" ; fi;
+        echo "$vm_id" > $id_file
+    else
+        echo "Error : import $@"
+        exit 0
+    fi
+}
+
+function _build_uni_vm_name(){
+    local node_name="$1"
+    if [ -z $node_name ]; then
+        node_name="${MYBOX}_${DEFAULT_NODE}"
+    else
+        node_name="${MYBOX}_${node_name}"
+    fi
+    echo "${node_name}_$(uuid)"
+}
+
+# "$BOXFOLDER/nodes/$node_name/vbox/id"
+function _get_mybox_node_path(){
+    local node_name="$1"
+    if [ -z ${node_name} ]; then
+        node_name="${MYBOX}_${DEFAULT_NODE}"
+    fi
+    echo "${BOXFOLDER}/nodes/${node_name}/vbox/id"
 }
 
 ######################
@@ -240,6 +297,10 @@ function start_()
             shift
             start_vm $@
             ;;
+        node*)
+            shift
+            start_node $@
+            ;;
         ""|-d|-D)
             shift
             start_boxes $@
@@ -266,16 +327,53 @@ function start_vm()
 
 
 }
+# Path like this ./.mybox/nodes/<node_name>/vbox/id
+function start_node(){
+    local node_name="$1"
+    local box_name="$2"
+    local id_file="$(_get_mybox_node_path $node_name)"
+    local vm_id=""
+
+    if [[ -f "${id_file}" ]]; then 
+        vm_id="$(cat "$id_file"|awk '{print $2}'|sed s'/{//'|sed s'/}//')"
+    fi;
+
+    if [[ ! -z "${vm_id}" ]]; then
+        start_vm ${vm_id}
+    else
+        if [[ -z "$box_name" ]];then
+            echo "BOX name is not set, can't do import. exit"
+            exit 1
+        fi
+        import "$box_name" "$node_name"
+        start_node "$node_name" "$box_name"
+    fi
+}
 
 function start_boxes()
 {
-    local boxconf="$1"
-    if [[ -z $boxconf ]]; then
-        boxconf="${BOXCONF_DEFAULT}"
-    fi
-    _check_box_conf $boxconf
+    _check_status
+
     echo start BOXes using \"${boxconf}\" ...
+
+
+    # Read confg
+    #  1. find Box, and verify if exist
+    #  2. find Node, node 1..n 
+    #  3. for every node, decided if need to import or start vm
+    #    1.) id not found or found not exist in vbox), import box, and save id into box_folder
+    #    2.) start vms by id from box_folder
+    
 }
+
+function _read_box_conf(){
+    local boxconf="$1"
+    # read [box] selection
+    # read [node] selection
+}
+
+
+
 
 ######################
 # STOP
@@ -313,11 +411,7 @@ function stop_vm()
 
 function stop_boxes()
 {
-    local boxconf="$1"
-    if [[ -z $boxconf ]]; then
-        boxconf="${BOXCONF_DEFAULT}"
-    fi
-    _check_box_conf $boxconf
+    _check_status
     echo stop BOXes using \"${boxconf}\" ...
 }
 
@@ -357,6 +451,7 @@ function usage_start()
 {
     _print_usage "start "
     _print_usage "start -d <boxconfig>"
+    _print_usage "start node <node_name> [box_name]"
     _print_usage "start vm <vm_name>"
 }
 function usage_stop()
