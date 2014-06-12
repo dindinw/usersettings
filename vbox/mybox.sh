@@ -5,33 +5,15 @@ DIR="$( cd "$( dirname "${BASH_SOURCE}" )" && pwd)"
 
 me=`basename $0`
 
-readonly BOXCONF=".boxconfig"
-readonly BOXFOLDER=".mybox"
+BOXCONF=".boxconfig"
+BOXFOLDER=".mybox"
 readonly MYBOX="mybox"
 readonly DEFAULT_NODE="default_node"
 
-function _check_home()
-{
-    if [ -z "${MYBOX_HOME}" ] ; then
-        MYBOX_HOME="D:\Boxes"
-        echo "WARNING: env \"MYBOX_HOME\" not set! using default path under \"${MYBOX_HOME}\""
-    fi
-    if [ ! -e "${MYBOX_HOME}" ]; then
-        echo "ERROR: MYBOX_HOME=\"{MYBOX_HOME}\" not exist, exit"
-        exit
-    fi
-    if [ -z "${VBOX_HOME}"] ; then
-        VBOX_HOME="${HOME}/VirtualBox VMs"
-        echo "WARNING: env \"VBOX_HOME\" not set! using default path under \"${VBOX_HOME}\""
-    fi
-    if [ ! -e "${VBOX_HOME}" ]; then
-        echo "ERROR: VBOX_HOME=\"{VBOX_HOME}\" not exist, exit"
-        exit
-    fi
 
-}
-_check_home
-
+######################
+# _ERR Functions
+######################
 function _err_unknown_opts()
 {
     echo "Error : Uknown opts " $@
@@ -71,22 +53,30 @@ function _err_box_folder_not_found(){
     echo "Error : $BOXFOLDER is not found in this directory. need to redo \"$me init\"."
 }
 
-function _confirm(){
-    local msg="$1"
-    read -r -p "$msg?[yes/no]" confirm
-    case "${confirm}" in 
-        [yY][eE][sS]|[yY])
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
-    esac
-}
+######################
+# _CHECK Functions
+######################
+function _check_home()
+{
+    if [ -z "${MYBOX_HOME}" ] ; then
+        MYBOX_HOME="D:\Boxes"
+        echo "WARNING: env \"MYBOX_HOME\" not set! using default path under \"${MYBOX_HOME}\""
+    fi
+    if [ ! -e "${MYBOX_HOME}" ]; then
+        echo "ERROR: MYBOX_HOME=\"{MYBOX_HOME}\" not exist, exit"
+        exit
+    fi
+    if [ -z "${VBOX_HOME}" ] ; then
+        VBOX_HOME="${HOME}/VirtualBox VMs"
+        echo "WARNING: env \"VBOX_HOME\" not set! using default path under \"${VBOX_HOME}\""
+    fi
+    if [ ! -e "${VBOX_HOME}" ]; then
+        echo "ERROR: VBOX_HOME=\"{VBOX_HOME}\" not exist, exit"
+        exit
+    fi
 
-function _print_usage(){
-    echo Usage : $me $1 
 }
+_check_home
 
 function _check_box_exist(){
     list_boxes|grep ^"$1"$
@@ -147,6 +137,67 @@ function _check_box_folder(){
     fi
 }
 
+######################
+# LIST
+######################
+# list all box template
+function list(){
+    case "$@" in
+        vms)
+            list_vms "$@"
+            ;;
+        nodes)
+            list_nodes
+            ;;
+        boxes)
+            list_boxes
+            ;;
+        boxes*)
+            shift
+            if [[ "$1" == "--detail" ]]; then
+                show_box_detail
+            else
+                usage_list
+            fi
+            ;;
+        *)
+            usage_list
+            ;;
+    esac
+}
+function list_boxes()
+{
+    pushd ${MYBOX_HOME} > /dev/null
+    for f in $(ls -m1 *.box); do basename $f .box; done;
+    popd > /dev/null
+}
+
+function show_box_detail(){
+    for box in $(find ${MYBOX_HOME} -type f -name "*.box")
+    do
+        local boxname=$(basename $(to_unix_path $box) .box)
+        echo 
+        echo "====================================================================="
+        echo "BOX NAME: $boxname"
+        echo "---------------------------------------------------------------------"
+        extract_win "${box}" "${boxname}.ovf" "${MYBOX_HOME}" > /dev/null
+        cat "${MYBOX_HOME}/${boxname}.ovf" |grep "vbox:Machine"
+        rm "${MYBOX_HOME}/${boxname}.ovf"
+    done
+}
+
+function list_nodes(){
+    _check_status
+    _get_all_node_name
+}
+
+function list_vms(){
+    vbox_list_vm
+}
+
+function list_running_vms(){
+    vbox_list_running_vms
+}
 
 ######################
 # STATUS
@@ -201,7 +252,7 @@ cat <<EOF > "$BOXCONF"
     box=REHL64
     vbox.modifyvm.memory=2048
 EOF
-    echo "Init a box config under `currentDir`/$BOXCONF successfully!"
+    echo "Init a box config under $PWD/$BOXCONF successfully!"
 }
 
 
@@ -222,7 +273,7 @@ function package()
     fi
 
     if [[ -f ${box}".box" ]]; then
-        if _confirm "WARNING: BOX named \"$2\" already exist, Do you want to overwrite it"; then
+        if confirm "WARNING: BOX named \"$2\" already exist, Do you want to overwrite it"; then
             rm ${box}".box"
         else
             exit
@@ -259,14 +310,14 @@ function import(){
     vbox_import_vm "${MYBOX_HOME}/${boxname}/${boxname}" "$vm_name"
 
     if [ "$?" -eq 0 ]; then
-        _set_vm_id_to_myboxfolder $vm_name $node_name
+        _set_vmid_to_myboxfolder $vm_name $node_name
     else
         echo "Error : Import \"${boxname}\" into VBOX VM \"${vm_name}\" failed! Exit."
         exit 1
     fi
 }
 
-function _set_vm_id_to_myboxfolder(){
+function _set_vmid_to_myboxfolder(){
     
     local vm_name="$1"
     local node_name="$2"
@@ -282,7 +333,7 @@ function _set_vm_id_to_myboxfolder(){
     echo "$vm_id" > $id_file
 }
 
-function _get_vm_id_from_myboxfolder(){
+function _get_vmid_from_myboxfolder(){
     
     local node_name="$1"
     local id_file="$(_get_mybox_node_path $node_name)"    
@@ -304,6 +355,13 @@ function _get_mybox_node_path(){
     echo "${BOXFOLDER}/nodes/${node_name}/vbox/id"
 }
 
+function _get_all_node_name(){
+
+    for node_name in $(ls ${BOXFOLDER}/nodes/ -m1)
+    do
+        echo $node_name
+    done
+}
 
 function _build_uni_vm_name(){
     local node_name="$1"
@@ -313,64 +371,6 @@ function _build_uni_vm_name(){
         node_name="${MYBOX}_${node_name}"
     fi
     echo "${node_name}_$(uuid)"
-}
-
-
-
-######################
-# LIST
-######################
-# list all box template
-function list(){
-    case "$@" in
-        vms)
-            list_vms "$@"
-            ;;
-        boxes)
-            list_boxes
-            ;;
-        boxes*)
-            shift
-            if [[ "$1" == "--detail" ]]; then
-                show_box_detail
-            else
-                usage_list
-            fi
-            ;;
-        *)
-            usage_list
-            ;;
-    esac
-}
-function list_boxes()
-{
-    pushd ${MYBOX_HOME} > /dev/null
-    for f in $(ls -m1 *.box); do basename $f .box; done;
-    popd > /dev/null
-}
-
-function show_box_detail(){
-    for box in $(find ${MYBOX_HOME} -type f -name "*.box")
-    do
-        local boxname=$(basename $(to_unix_path $box) .box)
-        echo 
-        echo "====================================================================="
-        echo "BOX NAME: $boxname"
-        echo "---------------------------------------------------------------------"
-        extract_win "${box}" "${boxname}.ovf" "${MYBOX_HOME}" > /dev/null
-        cat "${MYBOX_HOME}/${boxname}.ovf" |grep "vbox:Machine"
-        rm "${MYBOX_HOME}/${boxname}.ovf"
-    done
-}
-
-
-
-function list_vms(){
-    vbox_list_vm
-}
-
-function list_running_vms(){
-    vbox_list_running_vms
 }
 
 
@@ -420,7 +420,7 @@ function start_vm()
 function start_node(){
     local node_name="$1"
     local box_name="$2"
-    local vm_id=$(_get_vm_id_from_myboxfolder $node_name)
+    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
 
     if [[ ! -z "${vm_id}" ]]; then
         echo "Start MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
@@ -504,7 +504,7 @@ function stop_vm()
 function stop_node()
 {
     local node_name="$1"
-    local vm_id=$(_get_vm_id_from_myboxfolder $node_name)
+    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
     if [[ ! -z "${vm_id}" ]]; then
         echo "Stopping MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
         if _check_vm_exist_by_id $vm_id; then
@@ -535,12 +535,18 @@ function stop_boxes()
 function remove_vm()
 {
     local vm_name="$1"
-    echo remove VM \"${vm_name}\" ...
+    echo remove VBOX VM \"${vm_name}\" ...
+}
+function remove_node()
+{
+    local node_name="$1"
+    echo remove MYBOX Node \"${node_name}\" ...
+
 }
 function remove_box()
 {
     local box="$1"
-    echo remove BOX \"${box}\" ...
+    echo remove MYBOX \"${box}\" ...
 }
 
 ######################
@@ -553,19 +559,84 @@ function modify_vm(){
 }
 
 ######################
-# USAGE
+# HELP
 ######################
+
 function usage()
 {
-    #echo "usage all"
-    for cmd in "package" "list" "start" 
-    do usage_$cmd; done
+    echo "Usage: $me [-v] [-h] command [<args>]"
+    echo
+    echo "    -v, --version           Print the version and exit."
+    echo "    -h, --help              Print this help."
+    echo 
+    echo "User subcommands : The commands target for the MYBOX environment which defined" 
+    echo "                   by a Mybox configration file. \"$BOXCONF\"  by default."
+    echo "    init           initializes a new MYBOX environment by creating a \"$BOXCONF\""
+    echo "    up             starts and provisions the MYBOX environment by \"$BOXCONF\""
+    echo "    down           stops the MYBOX nodes in the MYBOX environment."
+    echo "    clean          stops and deletes all MYBOX nodes in the MYBOX environment."
+    echo "    provision      provisions the MYBOX nodes"
+    echo "    ssh            connects to node via SSH"
+    echo "    status         show status of the MYBOX nodes in the MYBOX environment"
+    #usage_internal
+    echo
+    echo "For help on any individual command run \"$me COMMAND [SUBCOMMAND] -h\""
 }
-function usage_ini(){
-    _print_usage "init [box_name]"
+function usage_internal()
+{
+    echo 
+    echo "Box subcommands : The commads to manage MYBOX boxes."
+    echo "    box add        download a pre-build box into user's local box repository"
+    echo "    box list       list boxes in user's local box repository."
+    echo "    box detail     show a box's detail."
+    echo "    box remove     remove a box from user's local box repository"
+    echo "    box pkgvbox    create a box from VirtualBox VM"
+    echo "    box impvbox    import a box into VirtualBox VM"
+    echo "    box pkgvmware  create a box from VMWare VM"
+    echo "    box impvmware  import a box into VMWare VM"
+    echo 
+    echo "Node subcommands : The commands to manage MYBOX nodes."
+    echo "    node list      list MYBOX nodes in the MYBOX environment"
+    echo "    node start     start a MYBOX node by node name"
+    echo "    node stop      stop a MYBOX node by node name"
+    echo "    node modify    to modify the node settings."
+    echo "    node remove    remove a MYBOX node from the MYBOX environment"
+    echo 
+    echo "VBOX subcommands : The commands to manage VirtualBox VM"
+    echo "    vbox list        list user's VirtualBox environment "
+    echo "    vbox start       start a VirtualBox VM."
+    echo "    vbox stop        stop a VirtualBox VM."
+    echo "    vbox modify      modify a VirtualBox VM"
+    echo "    vbox remove      remove a VM from the User's VirtualBox environment"
+    echo
+    echo "VMWare subcommands : The commands to manage VMWare VM"
+    echo "    vmware list      list VMs in user's VMWare environment "
+    echo "    vmware start     start a VMWare VM."
+    echo "    vmware stop      stop a VMWare VM."
+    echo "    vmware modify    modify a VMWare VM"
+    echo "    vmware remove    remove a VM from user's VMWare environment"
+    echo 
+    echo "!!! NOTE: Some Node/VM command is for internal test only. please use carefully "
+    echo "    improperly usage may result a corrupted  MYBOX environment.          "
 }
+
+function help_version()
+{
+    echo "$me 1.0.0"
+}
+
+function help_init(){
+    echo "Usage: $me init [box_name]"
+    echo "    -h, --help                       Print this help"
+}
+function help_up(){
+    echo "Usage: $me up [node_name]"
+    echo "    -h, --help                       Print this help"
+}
+
 function usage_package(){
-    _print_usage "package <box_name> [vm_name]"
+    _print_usage "package <box_name> <vm_name>"
+
 }
 
 function usage_start()
@@ -587,7 +658,9 @@ function usage_list(){
     _print_usage "list vms"
 }
 
-
+function _print_usage(){
+    echo Usage : $me $1 
+}
 
 
 ######################
@@ -600,7 +673,14 @@ function main(){
     case $cmd in
             init*)
                 shift
-                init "$@"
+                case "${@: -1}" in
+                    -h|--help)
+                        help_init
+                        ;;
+                    *)
+                        init "$@"
+                        ;;
+                esac
                 ;;
             package*)
                 shift
@@ -625,8 +705,10 @@ function main(){
             -h|--help)
                 usage
                 ;;
+            -v)
+                version
+                ;;
             *)
-                _err_unknown_opts $@
                 usage
                 ;;
     esac

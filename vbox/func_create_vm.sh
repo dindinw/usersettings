@@ -351,7 +351,7 @@ function vbox_import_vm(){
     fi
     if [[ ! -z "$3" ]] && [[ "$3" == "--confirm" ]]; then
         eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs --dry-run
-        if _confirm "are your sure to import "; then
+        if confirm "are your sure to import "; then
             eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs
         else
             return 1 #no import

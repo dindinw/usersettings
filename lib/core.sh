@@ -44,6 +44,20 @@ function uuid()
     echo
 }
 
+function confirm(){
+    local msg="$1"
+    read -r -p "$msg?[yes/no]" confirm
+    case "${confirm}" in 
+        [yY][eE][sS]|[yY])
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+
 function currentDir()
 {
     local DIR=$( cd "$( dirname "$0" )" && pwd )
