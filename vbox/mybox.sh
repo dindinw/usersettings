@@ -214,36 +214,6 @@ function _check_status(){
 }
 
 ######################
-# PACKAGE
-######################
-# generate a box template from a vbox vm
-function package()
-{
-    
-    local vm_name="$1"
-    local boxname="$(basename "$2" ".box")"
-    local box="${MYBOX_HOME}/${boxname}"
-    
-    if [ ! "$#" -eq 2 ] || [ -z "$vm_name" ] || [ -z "$box" ]; then 
-        _err_unknown_opts package $@
-        usage_package; exit
-    fi
-
-    if [[ -f ${box}".box" ]]; then
-        if confirm "WARNING: BOX named \"$2\" already exist, Do you want to overwrite it"; then
-            rm ${box}".box"
-        else
-            exit
-        fi
-    fi
-    mkdir -p ${box}
-    echo create Box \"${box}.box\" from VM \"${vm_name}\" ...
-    vbox_export_vm $vm_name "${box}/${boxname}"
-    tar_$arch "${box}.box" "${box}"
-    rm -rf "${box}"
-}
-
-######################
 # IMPORT
 ######################
 ## A Testing for import
@@ -569,51 +539,20 @@ function usage()
     echo "    provision      provisions the MYBOX nodes"
     echo "    ssh            connects to node via SSH"
     echo "    status         show status of the MYBOX nodes in the MYBOX environment"
+    echo "    box            manages MYBOX boxes."
     echo
-    echo "For help on any individual command run \"$me COMMAND [SUBCOMMAND] -h\""
+    echo "For help on any individual command run \"$me COMMAND -h\""
 }
 function usage_internal()
 {
     echo 
-    echo "Box subcommands : The commads to manage MYBOX boxes."
-    echo "    box add           download a pre-build box into user's local box repository"
-    echo "    box list          list boxes in user's local box repository."
-    echo "    box detail        show a box's detail."
-    echo "    box remove        remove a box from user's local box repository"
-    echo "    box pkgvbox       create a box from VirtualBox VM"
-    echo "    box impvbox       import a box into VirtualBox VM"
-    echo "    box pkgvmware     create a box from VMWare VM"
-    echo "    box impvmware     import a box into VMWare VM"
+    help_mybox_box
     echo 
-    echo "Node subcommands : The commands to manage MYBOX nodes."
-    echo "    node list         list MYBOX nodes in the MYBOX environment"
-    echo "    node start        start a MYBOX node by node name"
-    echo "    node stop         stop a MYBOX node by node name"
-    echo "    node modify       to modify the node settings."
-    echo "    node remove       remove a MYBOX node from the MYBOX environment"
-    echo "    node provision    pervision on a MYBOX node."
-    echo "    node ssh          connects to a MYBOX node."
-    echo "    node info         show detail information of a MYBOX node."
+    help_mybox_node
     echo 
-    echo "VBOX subcommands : The commands to manage VirtualBox VM"
-    echo "    vbox list         list user's VirtualBox environment "
-    echo "    vbox start        start a VirtualBox VM."
-    echo "    vbox stop         stop a VirtualBox VM."
-    echo "    vbox modify       modify a VirtualBox VM"
-    echo "    vbox remove       remove a VM from the User's VirtualBox environment"
-    echo "    vbox provision    pervision on a VirtualBox VM."
-    echo "    vbox ssh          connects to a VirtualBox VM."
-    echo "    vbox info         show detail information of a VirtualBox VM."
+    help_mybox_vbox
     echo
-    echo "VMWare subcommands : The commands to manage VMWare VM"
-    echo "    vmware list       list VMs in user's VMWare environment "
-    echo "    vmware start      start a VMWare VM."
-    echo "    vmware stop       stop a VMWare VM."
-    echo "    vmware modify     modify a VMWare VM"
-    echo "    vmware remove     remove a VM from user's VMWare environment"
-    echo "    vmware provision  pervision on a VMWare VM."
-    echo "    vmware ssh        connects to a VMWare VM."
-    echo "    vmware info       show detail information of a VMWare VM."
+    help_mybox_vmware
     echo 
     echo "!!! NOTE: Some Node/VM command is for internal test only. please use carefully "
     echo "    improperly usage may result a corrupted  MYBOX environment.          "
@@ -687,7 +626,15 @@ function help_mybox_status(){
 # FUNCTION help_mybox_box 
 #==================================
 function help_mybox_box(){
-    _print_not_support $FUNCNAME $@
+    echo "Box subcommands : The commads to manage MYBOX boxes."
+    echo "    box add           download a pre-build box into user's local box repository"
+    echo "    box list          list boxes in user's local box repository."
+    echo "    box detail        show a box's detail."
+    echo "    box remove        remove a box from user's local box repository"
+    echo "    box pkgvbox       create a box from VirtualBox VM"
+    echo "    box impvbox       import a box into VirtualBox VM"
+    echo "    box pkgvmware     create a box from VMWare VM"
+    echo "    box impvmware     import a box into VMWare VM"
 }
 #----------------------------------
 # FUNCTION help_mybox_box_add 
@@ -717,7 +664,13 @@ function help_mybox_box_remove(){
 # FUNCTION help_mybox_box_pkgvbox 
 #----------------------------------
 function help_mybox_box_pkgvbox(){
-    _print_not_support $FUNCNAME $@
+    echo "Usage: $me box pkgvbox <vbox_vm_name> <box_name>"
+    echo "    -h, --help                       Print this help"
+}
+
+function usage_package(){
+    _print_usage "package <box_name> <vm_name>"
+
 }
 #----------------------------------
 # FUNCTION help_mybox_box_impvbox 
@@ -741,7 +694,15 @@ function help_mybox_box_impvmware(){
 # FUNCTION help_mybox_node 
 #==================================
 function help_mybox_node(){
-    _print_not_support $FUNCNAME $@
+    echo "Node subcommands : The commands to manage MYBOX nodes."
+    echo "    node list         list MYBOX nodes in the MYBOX environment"
+    echo "    node start        start a MYBOX node by node name"
+    echo "    node stop         stop a MYBOX node by node name"
+    echo "    node modify       to modify the node settings."
+    echo "    node remove       remove a MYBOX node from the MYBOX environment"
+    echo "    node provision    pervision on a MYBOX node."
+    echo "    node ssh          connects to a MYBOX node."
+    echo "    node info         show detail information of a MYBOX node."
 }
 #----------------------------------
 # FUNCTION help_mybox_node_list 
@@ -795,7 +756,15 @@ function help_mybox_node_info(){
 # FUNCTION help_mybox_vbox 
 #==================================
 function help_mybox_vbox(){
-    _print_not_support $FUNCNAME $@
+    echo "VBOX subcommands : The commands to manage VirtualBox VM"
+    echo "    vbox list         list user's VirtualBox environment "
+    echo "    vbox start        start a VirtualBox VM."
+    echo "    vbox stop         stop a VirtualBox VM."
+    echo "    vbox modify       modify a VirtualBox VM"
+    echo "    vbox remove       remove a VM from the User's VirtualBox environment"
+    echo "    vbox provision    pervision on a VirtualBox VM."
+    echo "    vbox ssh          connects to a VirtualBox VM."
+    echo "    vbox info         show detail information of a VirtualBox VM."
 }
 #----------------------------------
 # FUNCTION help_mybox_vbox_list 
@@ -849,7 +818,15 @@ function help_mybox_vbox_info(){
 # FUNCTION help_mybox_vmware 
 #==================================
 function help_mybox_vmware(){
-    _print_not_support $FUNCNAME $@
+    echo "VMWare subcommands : The commands to manage VMWare VM"
+    echo "    vmware list       list VMs in user's VMWare environment "
+    echo "    vmware start      start a VMWare VM."
+    echo "    vmware stop       stop a VMWare VM."
+    echo "    vmware modify     modify a VMWare VM"
+    echo "    vmware remove     remove a VM from user's VMWare environment"
+    echo "    vmware provision  pervision on a VMWare VM."
+    echo "    vmware ssh        connects to a VMWare VM."
+    echo "    vmware info       show detail information of a VMWare VM."
 }
 #----------------------------------
 # FUNCTION help_mybox_vmware_list 
@@ -1026,12 +1003,42 @@ function mybox_box_detail(){
 function mybox_box_remove(){
     _print_not_support $FUNCNAME $@
 }
-#----------------------------------
+#----------------------------------------------------------
 # FUNCTION mybox_box_pkgvbox 
-#----------------------------------
+#   generate a box from a vbox vm
+# OPTS:
+#   $1 -> vbox vm name 
+#   $2 -> box name
+#----------------------------------------------------------
 function mybox_box_pkgvbox(){
-    _print_not_support $FUNCNAME $@
+    local vm_name="$1"
+    local boxname="$(basename "$2" ".box")"
+    local box="${MYBOX_HOME}/${boxname}"
+    
+    if [ ! "$#" -eq 2 ] || [ -z "$vm_name" ] || [ -z "$box" ]; then 
+        _err_unknown_opts $@
+        help_mybox_box_pkgvbox; 
+        exit 1
+    fi
+    if ! _check_vm_exist $vm_name; then
+        _err_vm_not_found $vm_name
+        exit 1
+    fi
+    if [[ -f ${box}".box" ]]; then
+        if confirm "WARNING: BOX named \"$2\" already exist, Do you want to overwrite it"; then
+            rm ${box}".box"
+        else
+            exit
+        fi
+    fi
+    mkdir -p ${box}
+    echo create Box \"${box}.box\" from VM \"${vm_name}\" ...
+
+    vbox_export_vm $vm_name "${box}/${boxname}"
+    tar_$arch "${box}.box" "${box}"
+    rm -rf "${box}"
 }
+
 #----------------------------------
 # FUNCTION mybox_box_impvbox 
 #----------------------------------
@@ -1237,10 +1244,7 @@ function mybox_vmware_info(){
     _print_not_support $FUNCNAME $@
 }
 
-function usage_package(){
-    _print_usage "package <box_name> <vm_name>"
 
-}
 
 function usage_start()
 {
@@ -1345,10 +1349,6 @@ function main(){
                 ;;
     esac
     # case $cmd in
-    #         init*)
-    #             shift
-    #             init "$@"
-    #             ;;
     #         package*)
     #             shift
     #             package "$@"
