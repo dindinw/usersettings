@@ -213,49 +213,6 @@ function _check_status(){
     _check_box_folder
 }
 
-
-######################
-# INIT
-######################
-# init a box config by box-template
-function init()
-{
-    local box="$1"
-
-    if [[ -z ${box} ]] ; then box="UnknownBox"; fi;
-
-    if [ "$#" -gt 1 ] ; then 
-        usage_init
-        exit 0
-    fi
-    _check_box_folder #create box folder if not created
-
-    if [[ -e "$BOXCONF" ]]; then
-        _err_boxconf_exist_when_init
-        exit 0
-    fi
-
-cat <<EOF > "$BOXCONF"
-    # box config 
-[box] 
-    box=${box}
-    
-    node.name=${MYBOX}_${DEFAULT_NODE}
-    vbox.modifyvm.memory=512
-# node
-[node 1]
-    vbox.modifyvm.name="another_name_node1"
-    vbox.modifyvm.memory=1024
-    vbox.modifyvm.nictype1="82540EM"
-
-[node 2]
-    box=REHL64
-    vbox.modifyvm.memory=2048
-EOF
-    echo "Init a box config under $PWD/$BOXCONF successfully!"
-}
-
-
 ######################
 # PACKAGE
 ######################
@@ -949,12 +906,52 @@ function help_mybox_vmware_info(){
 #
 ################################################################################
 
-#==================================
+#=============================================================================
 # FUNCTION mybox_init 
-#==================================
+#   init a box config from box-template by the given box name (optional)
+#
+# OPTS: 
+#   $1 (optional) -> box_name (if null , box_name = "UnknownBox")
+# RESULT:
+#   a file '.boxconfig' is created under current dir. if '.boxconfig' existed.
+#   program error and exist. need to remove it manaually before running.
+#=============================================================================
 function mybox_init(){
-    _print_not_support $FUNCNAME $@
+    local box="$1"
+
+    if [[ -z ${box} ]] ; then box="UnknownBox"; fi;
+
+    if [ "$#" -gt 1 ] ; then 
+        help_mybox_init
+        exit 0
+    fi
+    _check_box_folder #create box folder if not created
+
+    if [[ -e "$BOXCONF" ]]; then
+        _err_boxconf_exist_when_init
+        exit 0
+    fi
+
+cat <<EOF > "$BOXCONF"
+    # box config 
+[box] 
+    box=${box}
+    
+    node.name=${MYBOX}_${DEFAULT_NODE}
+    vbox.modifyvm.memory=512
+# node
+[node 1]
+    vbox.modifyvm.name="another_name_node1"
+    vbox.modifyvm.memory=1024
+    vbox.modifyvm.nictype1="82540EM"
+
+[node 2]
+    box=REHL64
+    vbox.modifyvm.memory=2048
+EOF
+    echo "Init a box config under $PWD/$BOXCONF successfully!"
 }
+
 #==================================
 # FUNCTION mybox_up 
 #==================================
@@ -1325,7 +1322,8 @@ function _call_command()
             done
         fi
     done
-    echo "verify command $@ failed!"
+    #echo "verify command $@ failed!"
+    usage
     return 1
 }
 
