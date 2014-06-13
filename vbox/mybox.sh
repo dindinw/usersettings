@@ -558,9 +558,43 @@ function modify_vm(){
     # vbox_guestssh_setup ${vm_name} 2300
 }
 
-######################
-# HELP
-######################
+
+
+################################################################################
+# 
+# MYBOX COMMANDS USAGE
+#
+################################################################################
+
+readonly COMMANDS=(
+    "mybox:init up down clean provision ssh status"
+    "myboxsub:box node vbox vmware"
+    "box:add list detail remove pkgvbox impvbox pkgvmware impvmware"
+    "node:list start stop modify remove provision ssh info"
+    "vbox:list start stop modify remove provision ssh info"
+    "vmware:list start stop modify remove provision ssh info"
+    )
+
+# Remember, # and ## work from the left end (beginning) of string,
+#           % and %% work from the right end.
+function __get_subcommands(){
+    for line in "${COMMANDS[@]}" ; do
+        local key=${line%%:*}
+        local value=${line#*:}
+        if [[ "$1" == "$key" ]]; then
+            echo $value
+            return 0
+        fi
+    done
+    echo ""
+}
+
+readonly     MYBOX_CMDS=$(__get_subcommands "mybox")
+readonly  MYBOX_SUBCMDS=$(__get_subcommands "myboxsub")
+readonly    BOX_SUBCMDS=$(__get_subcommands "box")
+readonly   NODE_SUBCMDS=$(__get_subcommands "node")
+readonly   VBOX_SUBCMDS=$(__get_subcommands "vbox")
+readonly VMWARE_SUBCMDS=$(__get_subcommands "vmware")
 
 function usage()
 {
@@ -578,7 +612,6 @@ function usage()
     echo "    provision      provisions the MYBOX nodes"
     echo "    ssh            connects to node via SSH"
     echo "    status         show status of the MYBOX nodes in the MYBOX environment"
-    #usage_internal
     echo
     echo "For help on any individual command run \"$me COMMAND [SUBCOMMAND] -h\""
 }
@@ -586,52 +619,625 @@ function usage_internal()
 {
     echo 
     echo "Box subcommands : The commads to manage MYBOX boxes."
-    echo "    box add        download a pre-build box into user's local box repository"
-    echo "    box list       list boxes in user's local box repository."
-    echo "    box detail     show a box's detail."
-    echo "    box remove     remove a box from user's local box repository"
-    echo "    box pkgvbox    create a box from VirtualBox VM"
-    echo "    box impvbox    import a box into VirtualBox VM"
-    echo "    box pkgvmware  create a box from VMWare VM"
-    echo "    box impvmware  import a box into VMWare VM"
+    echo "    box add           download a pre-build box into user's local box repository"
+    echo "    box list          list boxes in user's local box repository."
+    echo "    box detail        show a box's detail."
+    echo "    box remove        remove a box from user's local box repository"
+    echo "    box pkgvbox       create a box from VirtualBox VM"
+    echo "    box impvbox       import a box into VirtualBox VM"
+    echo "    box pkgvmware     create a box from VMWare VM"
+    echo "    box impvmware     import a box into VMWare VM"
     echo 
     echo "Node subcommands : The commands to manage MYBOX nodes."
-    echo "    node list      list MYBOX nodes in the MYBOX environment"
-    echo "    node start     start a MYBOX node by node name"
-    echo "    node stop      stop a MYBOX node by node name"
-    echo "    node modify    to modify the node settings."
-    echo "    node remove    remove a MYBOX node from the MYBOX environment"
+    echo "    node list         list MYBOX nodes in the MYBOX environment"
+    echo "    node start        start a MYBOX node by node name"
+    echo "    node stop         stop a MYBOX node by node name"
+    echo "    node modify       to modify the node settings."
+    echo "    node remove       remove a MYBOX node from the MYBOX environment"
+    echo "    node provision    pervision on a MYBOX node."
+    echo "    node ssh          connects to a MYBOX node."
+    echo "    node info         show detail information of a MYBOX node."
     echo 
     echo "VBOX subcommands : The commands to manage VirtualBox VM"
-    echo "    vbox list        list user's VirtualBox environment "
-    echo "    vbox start       start a VirtualBox VM."
-    echo "    vbox stop        stop a VirtualBox VM."
-    echo "    vbox modify      modify a VirtualBox VM"
-    echo "    vbox remove      remove a VM from the User's VirtualBox environment"
+    echo "    vbox list         list user's VirtualBox environment "
+    echo "    vbox start        start a VirtualBox VM."
+    echo "    vbox stop         stop a VirtualBox VM."
+    echo "    vbox modify       modify a VirtualBox VM"
+    echo "    vbox remove       remove a VM from the User's VirtualBox environment"
+    echo "    vbox provision    pervision on a VirtualBox VM."
+    echo "    vbox ssh          connects to a VirtualBox VM."
+    echo "    vbox info         show detail information of a VirtualBox VM."
     echo
     echo "VMWare subcommands : The commands to manage VMWare VM"
-    echo "    vmware list      list VMs in user's VMWare environment "
-    echo "    vmware start     start a VMWare VM."
-    echo "    vmware stop      stop a VMWare VM."
-    echo "    vmware modify    modify a VMWare VM"
-    echo "    vmware remove    remove a VM from user's VMWare environment"
+    echo "    vmware list       list VMs in user's VMWare environment "
+    echo "    vmware start      start a VMWare VM."
+    echo "    vmware stop       stop a VMWare VM."
+    echo "    vmware modify     modify a VMWare VM"
+    echo "    vmware remove     remove a VM from user's VMWare environment"
+    echo "    vmware provision  pervision on a VMWare VM."
+    echo "    vmware ssh        connects to a VMWare VM."
+    echo "    vmware info       show detail information of a VMWare VM."
     echo 
     echo "!!! NOTE: Some Node/VM command is for internal test only. please use carefully "
     echo "    improperly usage may result a corrupted  MYBOX environment.          "
 }
 
-function help_version()
+function version()
 {
     echo "$me 1.0.0"
 }
 
-function help_init(){
+function _print_not_support(){
+    echo "WARNNING! unspported function $1 : "
+    local cmd=$(echo "$1"|sed 's/_/ /g')
+    shift
+    echo "command opts : $@"
+    echo "Sorry, the command \"${cmd}\" is not supported now!"
+}
+
+################################################################################
+#
+# MYBOX HELPS COMMMANDS
+#
+################################################################################
+
+#==================================
+# FUNCTION help_mybox_init 
+#==================================
+function help_mybox_init(){
     echo "Usage: $me init [box_name]"
     echo "    -h, --help                       Print this help"
 }
-function help_up(){
+#==================================
+# FUNCTION help_mybox_up 
+#==================================
+function help_mybox_up(){
     echo "Usage: $me up [node_name]"
     echo "    -h, --help                       Print this help"
+}
+
+#==================================
+# FUNCTION help_mybox_down 
+#==================================
+function help_mybox_down(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION help_mybox_clean 
+#==================================
+function help_mybox_clean(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION help_mybox_provision 
+#==================================
+function help_mybox_provision(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION help_mybox_ssh 
+#==================================
+function help_mybox_ssh(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION help_mybox_status 
+#==================================
+function help_mybox_status(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION help_mybox_box 
+#==================================
+function help_mybox_box(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_box_add 
+#----------------------------------
+function help_mybox_box_add(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_box_list 
+#----------------------------------
+function help_mybox_box_list(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_box_detail 
+#----------------------------------
+function help_mybox_box_detail(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_box_remove 
+#----------------------------------
+function help_mybox_box_remove(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_box_pkgvbox 
+#----------------------------------
+function help_mybox_box_pkgvbox(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_box_impvbox 
+#----------------------------------
+function help_mybox_box_impvbox(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_box_pkgvmware 
+#----------------------------------
+function help_mybox_box_pkgvmware(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_box_impvmware 
+#----------------------------------
+function help_mybox_box_impvmware(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION help_mybox_node 
+#==================================
+function help_mybox_node(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_node_list 
+#----------------------------------
+function help_mybox_node_list(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_node_start 
+#----------------------------------
+function help_mybox_node_start(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_node_stop 
+#----------------------------------
+function help_mybox_node_stop(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_node_modify 
+#----------------------------------
+function help_mybox_node_modify(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_node_remove 
+#----------------------------------
+function help_mybox_node_remove(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_node_provision 
+#----------------------------------
+function help_mybox_node_provision(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_node_ssh 
+#----------------------------------
+function help_mybox_node_ssh(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_node_info 
+#----------------------------------
+function help_mybox_node_info(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION help_mybox_vbox 
+#==================================
+function help_mybox_vbox(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vbox_list 
+#----------------------------------
+function help_mybox_vbox_list(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vbox_start 
+#----------------------------------
+function help_mybox_vbox_start(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vbox_stop 
+#----------------------------------
+function help_mybox_vbox_stop(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vbox_modify 
+#----------------------------------
+function help_mybox_vbox_modify(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vbox_remove 
+#----------------------------------
+function help_mybox_vbox_remove(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vbox_provision 
+#----------------------------------
+function help_mybox_vbox_provision(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vbox_ssh 
+#----------------------------------
+function help_mybox_vbox_ssh(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vbox_info 
+#----------------------------------
+function help_mybox_vbox_info(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION help_mybox_vmware 
+#==================================
+function help_mybox_vmware(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vmware_list 
+#----------------------------------
+function help_mybox_vmware_list(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vmware_start 
+#----------------------------------
+function help_mybox_vmware_start(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vmware_stop 
+#----------------------------------
+function help_mybox_vmware_stop(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vmware_modify 
+#----------------------------------
+function help_mybox_vmware_modify(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vmware_remove 
+#----------------------------------
+function help_mybox_vmware_remove(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vmware_provision 
+#----------------------------------
+function help_mybox_vmware_provision(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vmware_ssh 
+#----------------------------------
+function help_mybox_vmware_ssh(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION help_mybox_vmware_info 
+#----------------------------------
+function help_mybox_vmware_info(){
+    _print_not_support $FUNCNAME $@
+}
+
+################################################################################
+#
+# MYBOX USER COMMMANDS
+#
+################################################################################
+
+#==================================
+# FUNCTION mybox_init 
+#==================================
+function mybox_init(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION mybox_up 
+#==================================
+function mybox_up(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION mybox_down 
+#==================================
+function mybox_down(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION mybox_clean 
+#==================================
+function mybox_clean(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION mybox_provision 
+#==================================
+function mybox_provision(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION mybox_ssh 
+#==================================
+function mybox_ssh(){
+    _print_not_support $FUNCNAME $@
+}
+#==================================
+# FUNCTION mybox_status 
+#==================================
+function mybox_status(){
+    _print_not_support $FUNCNAME $@
+}
+
+################################################################################
+#
+# MYBOX BOX COMMMANDS
+#
+################################################################################
+
+#==================================
+# FUNCTION mybox_box
+#==================================
+function mybox_box(){
+    _print_not_support $FUNCNAME $@
+}
+
+#----------------------------------
+# FUNCTION mybox_box_add 
+#----------------------------------
+function mybox_box_add(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_box_list 
+#----------------------------------
+function mybox_box_list(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_box_detail 
+#----------------------------------
+function mybox_box_detail(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_box_remove 
+#----------------------------------
+function mybox_box_remove(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_box_pkgvbox 
+#----------------------------------
+function mybox_box_pkgvbox(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_box_impvbox 
+#----------------------------------
+function mybox_box_impvbox(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_box_pkgvmware 
+#----------------------------------
+function mybox_box_pkgvmware(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_box_impvmware 
+#----------------------------------
+function mybox_box_impvmware(){
+    _print_not_support $FUNCNAME $@
+}
+
+################################################################################
+#
+# MYBOX NODE COMMMANDS
+#
+################################################################################
+
+#==================================
+# FUNCTION mybox_node
+#==================================
+function mybox_node(){
+    _print_not_support $FUNCNAME $@
+}
+
+#----------------------------------
+# FUNCTION mybox_node_list 
+#----------------------------------
+function mybox_node_list(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_node_start 
+#----------------------------------
+function mybox_node_start(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_node_stop 
+#----------------------------------
+function mybox_node_stop(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_node_modify 
+#----------------------------------
+function mybox_node_modify(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_node_remove 
+#----------------------------------
+function mybox_node_remove(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_node_provision 
+#----------------------------------
+function mybox_node_provision(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_node_ssh 
+#----------------------------------
+function mybox_node_ssh(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_node_info 
+#----------------------------------
+function mybox_node_info(){
+    _print_not_support $FUNCNAME $@
+}
+
+################################################################################
+#
+# MYBOX VBOX COMMMANDS
+#
+################################################################################
+
+#==================================
+# FUNCTION mybox_vbox
+#==================================
+function mybox_vbox(){
+    _print_not_support $FUNCNAME $@
+}
+
+#----------------------------------
+# FUNCTION mybox_vbox_list 
+#----------------------------------
+function mybox_vbox_list(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vbox_start 
+#----------------------------------
+function mybox_vbox_start(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vbox_stop 
+#----------------------------------
+function mybox_vbox_stop(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vbox_modify 
+#----------------------------------
+function mybox_vbox_modify(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vbox_remove 
+#----------------------------------
+function mybox_vbox_remove(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vbox_provision 
+#----------------------------------
+function mybox_vbox_provision(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vbox_ssh 
+#----------------------------------
+function mybox_vbox_ssh(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vbox_info 
+#----------------------------------
+function mybox_vbox_info(){
+    _print_not_support $FUNCNAME $@
+}
+
+################################################################################
+#
+# MYBOX VMWARE COMMMANDS
+#
+################################################################################
+
+#==================================
+# FUNCTION mybox_vmware
+#==================================
+function mybox_vmware(){
+    _print_not_support $FUNCNAME $@
+}
+
+#----------------------------------
+# FUNCTION mybox_vmware_list 
+#----------------------------------
+function mybox_vmware_list(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vmware_start 
+#----------------------------------
+function mybox_vmware_start(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vmware_stop 
+#----------------------------------
+function mybox_vmware_stop(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vmware_modify 
+#----------------------------------
+function mybox_vmware_modify(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vmware_remove 
+#----------------------------------
+function mybox_vmware_remove(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vmware_provision 
+#----------------------------------
+function mybox_vmware_provision(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vmware_ssh 
+#----------------------------------
+function mybox_vmware_ssh(){
+    _print_not_support $FUNCNAME $@
+}
+#----------------------------------
+# FUNCTION mybox_vmware_info 
+#----------------------------------
+function mybox_vmware_info(){
+    _print_not_support $FUNCNAME $@
 }
 
 function usage_package(){
@@ -663,54 +1269,121 @@ function _print_usage(){
 }
 
 
-######################
-# MAIN
-######################
+
+################################################################################
+#
+# MYBOX MAIN
+#
+################################################################################
+
+function _call_command()
+{
+    local opts=$@
+    local opts_size=${#@}
+    local last_opt=${@: -1}
+    local verify_ok=1
+
+    #echo inputs   : $opts
+    #echo size     : $opts_size
+    #echo last one : $last_opt
+
+    for cmd_user in $MYBOX_CMDS; do
+        if [[ "$1" == "$cmd_user" ]]; then
+            echo "verify command $@ ok!"
+            if [[ "$last_opt" == "-h" || "$last_opt" == "--help" ]]; then 
+                eval help_mybox_$1
+                return $?
+            else
+                local cmd=$1
+                shift
+                eval mybox_$cmd $@
+                return $?
+            fi
+
+        fi
+    done
+    for cmd_subs in $MYBOX_SUBCMDS; do
+        # if found, need to go subcomds
+        if [[ "$1" == "$cmd_subs" ]]; then
+            if [[ -z "$2" || "$2" == "-h" || "$2" == "--help" ]] ; then
+                eval help_mybox_$1
+                return $?
+            fi
+            for subcmd in $(__get_subcommands $cmd_subs); do
+                if [[ "$2" == "$subcmd" ]]; then
+                    if [[ "$last_opt" == "-h" || "$last_opt" == "--help" ]]; then
+                        eval help_mybox_$1_$2
+                        return $?
+                    else
+                        local cmd=$1_$2
+                        shift
+                        shift
+                        eval mybox_$cmd $@
+                        return $?
+                    fi
+                fi
+            done
+        fi
+    done
+    echo "verify command $@ failed!"
+    return 1
+}
+
 function main(){
     local cmd="$1"
-    local opts=$@
-    #echo inputs : $opts
     case $cmd in
-            init*)
-                shift
-                case "${@: -1}" in
-                    -h|--help)
-                        help_init
-                        ;;
-                    *)
-                        init "$@"
-                        ;;
-                esac
-                ;;
-            package*)
-                shift
-                package "$@"
-                ;;
-            list*)
-                shift
-                list $@
-                ;;
-            import*)
-                shift
-                import $@
-                ;;
-            start*)
-                shift
-                start_ $@
-                ;;
-            stop*)
-                shift
-                stop $@
-                ;;
-            -h|--help)
+            ""|-h|--help)
                 usage
                 ;;
             -v)
                 version
                 ;;
-            *)
+            -H)
                 usage
+                usage_internal
+                ;;
+            *)
+                _call_command $@
                 ;;
     esac
+    # case $cmd in
+    #         init*)
+    #             shift
+    #             init "$@"
+    #             ;;
+    #         package*)
+    #             shift
+    #             package "$@"
+    #             ;;
+    #         list*)
+    #             shift
+    #             list $@
+    #             ;;
+    #         import*)
+    #             shift
+    #             import $@
+    #             ;;
+    #         start*)
+    #             shift
+    #             start_ $@
+    #             ;;
+    #         stop*)
+    #             shift
+    #             stop $@
+    #             ;;
+    #         -h|--help)
+    #             usage
+    #             ;;
+    #         -v)
+    #             version
+    #             ;;
+    #         -H)
+    #             usage
+    #             usage_internal
+    #             ;;
+    #         *)
+    #             usage
+    #             ;;
+    # esac
 }
 main $@
