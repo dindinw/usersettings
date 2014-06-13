@@ -79,7 +79,8 @@ function _check_home()
 _check_home
 
 function _check_box_exist(){
-    list_boxes|grep ^"$1"$
+    local box=$(basename "$1" ".box")
+    list_boxes|grep ^"$box"$
     return $?
 }
 function _check_vm_exist(){
@@ -470,11 +471,6 @@ function remove_node()
     echo remove MYBOX Node \"${node_name}\" ...
 
 }
-function remove_box()
-{
-    local box="$1"
-    echo remove MYBOX \"${box}\" ...
-}
 
 ######################
 # MODIFY
@@ -658,12 +654,15 @@ function help_mybox_box_detail(){
 # FUNCTION help_mybox_box_remove 
 #----------------------------------
 function help_mybox_box_remove(){
-    _print_not_support $FUNCNAME $@
+    echo "Remove a existed MYBOX box by given box name from local MYBOX repository."
+    echo "Usage: $me box remove <box_name>"
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_box_pkgvbox 
 #----------------------------------
 function help_mybox_box_pkgvbox(){
+    echo "Create an new MYBOX box by exporting from an existed VirtualBox VM."
     echo "Usage: $me box pkgvbox <vbox_vm_name> <box_name>"
     echo "    -h, --help                       Print this help"
 }
@@ -1001,8 +1000,16 @@ function mybox_box_detail(){
 # FUNCTION mybox_box_remove 
 #----------------------------------
 function mybox_box_remove(){
-    _print_not_support $FUNCNAME $@
+    local box="$1"
+    if [[ -z $box ]]; then help_mybox_box_remove; return 1; fi;
+    if _check_box_exist ${box} ; then
+        echo remove MYBOX \"${box}\" ...
+    else
+        _err_box_not_found ${box}
+        return 1
+    fi
 }
+
 #----------------------------------------------------------
 # FUNCTION mybox_box_pkgvbox 
 #   generate a box from a vbox vm
