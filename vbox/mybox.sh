@@ -236,6 +236,40 @@ function _import_box_to_vbox_vm() {
     return $?
 }
 
+function _import_node_vbox(){
+    log_debug $FUNCNAME $@
+    local boxname="$1"
+    local boxfile="${MYBOX_HOME}/$boxname.box"
+    local node_name="$2"
+    local force="$3"
+
+    if _check_node_exist $node_name; then
+        if ! [[ $force -eq 1 ]]  && ! confirm "Node \"$node_name\" are already existed, import will overwrite, are yor sure to continue"; then
+            return 1
+        fi
+    fi
+
+    if ! _check_box_exist ${boxname}; then
+        _err_box_not_found ${boxname}
+        return 1
+    fi
+    local vm_name=$(_build_uni_vm_name $node_name)
+
+    if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
+        mkdir -p "${MYBOX_HOME}/${boxname}"
+        untar_win "${boxfile}" "${MYBOX_HOME}/${boxname}"
+    fi
+
+    vbox_import_ovf "${MYBOX_HOME}/${boxname}/${boxname}.ovf" "$vm_name"
+
+    if [ "$?" -eq 0 ]; then
+        _set_vmid_to_myboxfolder $vm_name $node_name
+    else
+        log_err "Error : Import \"${boxname}\" into VBOX VM \"${vm_name}\" failed!"
+        return 1
+    fi
+}
+
 ######################
 # LIST
 ######################
@@ -1155,36 +1189,15 @@ function mybox_node_start(){
     log_debug $FUNCNAME $@
     if [[ ! -z "$1" ]]; then
         local node_name="$1"
-        shift
-        if [[ -z "$1" ]]; then
-            local provider="vbox"
-        else
-            if [[ "$1" == "--provider" ]]; then
-                shift
-                case "$1" in
-                    vbox)
-                        $provider="vbox"
-                        ;;
-                    vmware)
-                        $provider="vmware"
-                        ;;
-                    *)
-                        ;;
-                esac
-            fi
-        fi
-        if [[ ! -z $provider ]]; then
-            _start_node_${provider} $node_name
-            return $?
-        fi
+        _start_node $node_name
+        return $?
     fi
     help_$FUNCNAME
 }
 
-function _start_node_vbox(){
+function _start_node(){
     log_debug $FUNCNAME $@
     local node_name="$1"
-    local box_name="$2"
     local vm_id=$(_get_vmid_from_myboxfolder $node_name)
 
     if [[ ! -z "${vm_id}" ]]; then
@@ -1193,44 +1206,10 @@ function _start_node_vbox(){
             start_vm ${vm_id}
             if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" started OK!"; fi
             return $?
+        else
+            log_warn "MYBOX Node \"$node_name\" with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import."
         fi
     fi
-    if [[ -z "$box_name" ]];then
-        echo "BOX name is not set, can't do import. exit"
-        exit 1
-    fi
-    _import_node "$box_name" "$node_name"
-    if [[ $? -eq 0 ]]; then #import ok
-        _start_node_vbox "$node_name" "$box_name"
-    fi
-}
-
-# Path like this ./.mybox/nodes/<node_name>/vbox/id
-function start_node(){
-    local node_name="$1"
-    local box_name="$2"
-    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
-
-    if [[ ! -z "${vm_id}" ]]; then
-        echo "Start MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
-        if _check_vm_exist_by_id $vm_id; then
-            start_vm ${vm_id}
-            if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" started OK!"; fi
-            return $?
-        fi
-    fi
-    if [[ -z "$box_name" ]];then
-        echo "BOX name is not set, can't do import. exit"
-        exit 1
-    fi
-    import "$box_name" "$node_name"
-    if [[ $? -eq 0 ]]; then #import ok
-        start_node "$node_name" "$box_name"
-    fi
-}
-
-function _start_node_vmware(){
-    _print_not_support $FUNCNAME $@
 }
 
 #----------------------------------
@@ -1278,39 +1257,7 @@ function mybox_node_import(){
     help_$FUNCNAME
 }
 
-function _import_node_vbox(){
-    log_debug $FUNCNAME $@
-    local boxname="$1"
-    local boxfile="${MYBOX_HOME}/$boxname.box"
-    local node_name="$2"
-    local force="$3"
 
-    if _check_node_exist $node_name; then
-        if ! [[ $force -eq 1 ]]  && ! confirm "Node \"$node_name\" are already existed, import will overwrite, are yor sure to continue"; then
-            return 1
-        fi
-    fi
-
-    if ! _check_box_exist ${boxname}; then
-        _err_box_not_found ${boxname}
-        return 1
-    fi
-    local vm_name=$(_build_uni_vm_name $node_name)
-
-    if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
-        mkdir -p "${MYBOX_HOME}/${boxname}"
-        untar_win "${boxfile}" "${MYBOX_HOME}/${boxname}"
-    fi
-
-    vbox_import_ovf "${MYBOX_HOME}/${boxname}/${boxname}.ovf" "$vm_name"
-
-    if [ "$?" -eq 0 ]; then
-        _set_vmid_to_myboxfolder $vm_name $node_name
-    else
-        log_err "Error : Import \"${boxname}\" into VBOX VM \"${vm_name}\" failed!"
-        return 1
-    fi
-}
 
 function _import_node_vmware(){
      _print_not_support $FUNCNAME $@
