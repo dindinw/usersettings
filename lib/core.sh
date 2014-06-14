@@ -17,6 +17,62 @@ function trace_end()
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 }
 
+################################################################################
+# 
+# LOG Functions
+#
+################################################################################
+
+readonly LOG_LEVEL_QUIET=0
+readonly LOG_LEVEL_ERROR=1
+readonly LOG_LEVEL_WARNING=2
+readonly LOG_LEVEL_INFO=3
+readonly LOG_LEVEL_DEBUG=4
+readonly LOG_LEVEL_TRACE=5
+
+LOG_LEVEL=$LOG_LEVEL_DEBUG
+LOG_OUTPUT=STDOUT
+#LOG_STYLE="$(date)"
+
+function _log() {
+    if [[ $1 -le $LOG_LEVEL ]]; then
+        if [[ -z ${LOG_OUTPUT} ]] || [[ ${LOG_OUTPUT} == "STDOUT" ]];then
+            shift
+            echo $LOG_STYLE $@ >&1 
+        else
+            shift
+            echo $LOG_STYLE $@ > "${LOG_OUTPUT}"
+        fi
+    fi
+
+    
+}
+#default log func will always print
+function log() { 
+    _log $LOG_LEVEL_QUIET "$@"
+}
+
+function log_err(){
+    _log $LOG_LEVEL_ERROR "ERROR: $@"
+}
+
+function log_warn(){
+    _log $LOG_LEVEL_WARNING "WARNING: $@"
+}
+
+function log_info(){
+    _log $LOG_LEVEL_INFO "INFO: $@"
+}
+
+function log_debug() {
+    _log $LOG_LEVEL_DEBUG "DEBUG: $@"
+}
+
+function log_trace(){
+    _log $LOG_LEVEL_TRACE "TRACE: $@"
+}
+
+
 function uuid()
 {
     local N B C='89ab'
@@ -43,10 +99,17 @@ function uuid()
 
     echo
 }
-
+# 
+# read opts 
+#  -p prompt  output the string PROMPT without a trailing newline before
+#     attempting to read
+#  -r do not allow backslashes to escape any characters
+#  -s do not echo input coming from a terminal
+#
 function confirm(){
     local msg="$1"
-    read -r -p "$msg?[yes/no]" confirm
+    read -r -p "$msg ? [yes/no] " -s confirm
+    echo
     case "${confirm}" in 
         [yY][eE][sS]|[yY])
             return 0
@@ -92,9 +155,10 @@ function untar_win(){
 }
 
 function extract_win(){
-    local archive_name="$1"
-    local extract_file_name="$2"
-    local output_dir="$3"
+    local archive_name=$(to_win_path "$1")
+    local extract_file_name=$(to_win_path "$2")
+    local output_dir=$(to_win_path "$3")
+    echo $archive_name $extract_file_name $output_dir
     _7z_extract $archive_name $extract_file_name $output_dir
 }
 
@@ -187,36 +251,48 @@ function ostype()
     OS=$(uname)
     MACH=$(uname -m)
 
-    if [[ "$OS" == "Linux" ]]; then
-        OS=$OS_LINUX
-        FILE_EXT=$FILE_EXT_LINUX
-        if [[ "$MACH" == "x86_64" ]]; then
-            #64 bit
-            MACH=$MACH_64
-        else
-            #32 bit
-            MACH=$MACH_32
-        fi
-    elif [[ "$OS" == "Darwin" ]]; then
-        OS=$OS_MAC
-        FILE_EXT=$FILE_EXT_MAC
-        # TODO 32/64
-
-    else #WIN
-        OS=$OS_WIN
-        FILE_EXT=$FILE_EXT_WIN
-        if [[ "$(echo cpu get addresswidth|wmic 2> /dev/null |awk '$1 ~/64/ {print $1}')" == "64" ]]; then
-            # 64 bit
-            MACH=$MACH_64
-        else
-            # 32 bit
-            MACH=$MACH_32
-        fi
-
-        OS_NAME=$(echo 'os get name'|wmic 2>/dev/null |awk -F "|" '$1 ~ /^Mic/ {print $1}')
-        OS_VERSION=$(echo 'os get version' | wmic 2> /dev/null |awk '$1 ~ /^[0-9]/ {print $1}')
-        
-    fi
+    case "$OS" in
+            Linux*)
+                OS=$OS_LINUX
+                FILE_EXT=$FILE_EXT_LINUX
+                if [[ "$MACH" == "x86_64" ]]; then
+                    #64 bit
+                    MACH=$MACH_64
+                else
+                    #32 bit
+                    MACH=$MACH_32
+                fi
+                ;;
+            Darwin*)
+                OS=$OS_MAC
+                FILE_EXT=$FILE_EXT_MAC
+                # TODO 32/64
+                ;;
+            MINGW*)
+                #Mingw
+                OS=$OS_WIN
+                FILE_EXT=$FILE_EXT_WIN
+                ;;
+            CYGWIN*)
+                # cygwin
+                OS=$OS_WIN
+                FILE_EXT=$FILE_EXT_WIN
+                ;;
+            *)
+                # I like it to Windows :-)
+                OS=$OS_WIN
+                FILE_EXT=$FILE_EXT_WIN
+                if [[ "$(echo cpu get addresswidth|wmic 2> /dev/null |awk '$1 ~/64/ {print $1}')" == "64" ]]; then
+                    # 64 bit
+                    MACH=$MACH_64
+                else
+                    # 32 bit
+                    MACH=$MACH_32
+                fi
+                OS_NAME=$(echo 'os get name'|wmic 2>/dev/null |awk -F "|" '$1 ~ /^Mic/ {print $1}')
+                OS_VERSION=$(echo 'os get version' | wmic 2> /dev/null |awk '$1 ~ /^[0-9]/ {print $1}')
+                ;;
+    esac
     if [[ "$OS" == "UNKNOWN" ]] || [[ "$MACH" == "UNKNOWN" ]] \
         || [[ "$FILE_EXT" == "UNKNOWN" ]]; then
         echo "ERROR : Get Platform Info Failed"

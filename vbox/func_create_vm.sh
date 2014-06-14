@@ -331,34 +331,38 @@ function vbox_export_vm(){
     VBoxManage export ${vm_name} --output ${box}".ovf"
 }
 
-function vbox_import_vm(){
-    local box="$1"
-    local boxfile="${box}.ovf"
+function vbox_import_ovf(){
+    log_debug $FUNCNAME $@
+    local ovf_file="$1"
     local vm_name="$2"
-    if [[ ! -z ${vm_name} ]];then 
-        local opt="--vsys 0 --vmname $vm_name"
-        IFS=$'\n'
-        local count=1
-        for disk in $(Vboxmanage import ${boxfile} --dry-run 2>&1|grep "disk path"|awk -F "\"" '{print $2}'|sed s'/--vsys 0//'|sed s'/ path//')
-        do 
-            opt="$opt $disk \"${VBOX_HOME}/$vm_name/disk$count.vmdk\""
-            let count=count+1
-        done
-        unset IFS
+
+    if [[ -z "$vm_name" ]] || _check_vm_exist $vm_name; then
+        return 1 
     fi
-    if [[ ! -z ${opt} ]] && [[ ! -z "$DEBUG" ]]; then
-        echo "DEBUG: The Vbox Import OPTS : [ $opt ]"
-    fi
-    if [[ ! -z "$3" ]] && [[ "$3" == "--confirm" ]]; then
-        eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs --dry-run
+    local opts="--vsys 0 --vmname $vm_name"
+    
+    IFS=$'\n'
+    local count=1
+    for disk in $(Vboxmanage import ${ovf_file} --dry-run 2>&1|grep "disk path"|awk -F "\"" '{print $2}'|sed s'/--vsys 0//'|sed s'/ path//')
+    do 
+        opts="$opts $disk \"${VBOX_HOME}/$vm_name/disk$count.vmdk\""
+        let count=count+1
+    done
+    unset IFS
+
+    log_debug "The Vbox Import OPTS : [ $opts ]"
+   
+    if [[ -z "$3" ]]; then
+        # the default, run directly and ignore output
+        eval Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs > /dev/null
+    elif [[ "$3" == "--confirm" ]]; then
+        # if dry-run
+        eval Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs --dry-run
         if confirm "are your sure to import "; then
-            eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs
-        else
-            return 1 #no import
+            eval Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs
         fi
-    else
-        eval Vboxmanage import ${boxfile} ${opt} --options keepnatmacs > /dev/null
     fi
+    return $?
 }
 
 function vbox_list_vm(){

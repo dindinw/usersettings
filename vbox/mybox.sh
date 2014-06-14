@@ -31,23 +31,27 @@ function _err_file_not_found()
 
 function _err_box_not_found()
 {
-    echo "Error : Box \"$1\" not found"
+    echo "Error : MYBOX box \"$1\" not found"
 }
 
 function _err_vm_not_found(){
-    echo "Error : VM \"$1\" not found"
+    echo "Error : VirtualBox VM \"$1\" not found"
 }
 
 function _err_vm_exist(){
-    echo "Errro : VM \"$1\" exist"
+    echo "Errro : VirtualBox VM \"$1\" exist"
 }
 
 function _err_not_null(){
     echo "Error : \"$1\" should not be null"
 }
 function _err_boxconf_exist_when_init(){
-    echo "Error : \"$BOXCONF\" already exists in this directory."
-    echo "        Remove it before running \"$me init\"."
+    echo "Error : MYBOX configuration file \"$BOXCONF\" already exists in this directory."
+    echo "        Please remove it before running \"$me init\"."
+}
+function _err_boxconf_not_found(){
+    echo "Error : MYBOX configuration file \"$BOXCONF\" not found in $(pwd) ."
+    echo "        Please init your MYBOX environment by running \"$me init\"."
 }
 function _err_box_folder_not_found(){
     echo "Error : $BOXFOLDER is not found in this directory. need to redo \"$me init\"."
@@ -62,6 +66,7 @@ function _check_home()
         MYBOX_HOME="D:\Boxes"
         echo "WARNING: env \"MYBOX_HOME\" not set! using default path under \"${MYBOX_HOME}\""
     fi
+    MYBOX_HOME=$(to_unix_path $MYBOX_HOME)
     if [ ! -e "${MYBOX_HOME}" ]; then
         echo "ERROR: MYBOX_HOME=\"{MYBOX_HOME}\" not exist, exit"
         exit
@@ -78,11 +83,36 @@ function _check_home()
 }
 _check_home
 
+function _check_status(){
+    _check_box_conf
+    _check_box_folder
+}
+
+function _check_box_conf(){
+    if [[ ! -f ${BOXCONF} ]]; then
+        _err_boxconf_not_found ${BOXCONF}
+        exit 0
+    fi
+}
+function _check_box_folder(){
+    # build $BOXFOLDER if not exist
+    if [[ ! -d $BOXFOLDER ]]; then
+        mkdir -p $BOXFOLDER
+    fi
+}
+
 function _check_box_exist(){
     local box=$(basename "$1" ".box")
-    list_boxes|grep ^"$box"$
+    _get_all_box_names|grep ^"$box"$ > /dev/null
     return $?
 }
+
+function _check_node_exist(){
+    local node_name="$1"
+    _get_all_node_name|grep ^"${node_name}"$ > /dev/null
+    return $?
+}
+
 function _check_vm_exist(){
     if _check_vm_exist_by_name "$1"; then
         return 0
@@ -125,17 +155,85 @@ function _check_vm_running_by_id(){
     if [ $? -eq 0 ]; then return 0; else return 1; fi
 }
 
-function _check_box_conf(){
-    if [[ ! -f ${BOXCONF} ]]; then
-        _err_file_not_found ${BOXCONF}
-        exit 0
+
+######################
+# _DEL Functions
+######################
+
+function _del_box(){
+    local box=$(basename "$1" ".box")
+    pushd ${MYBOX_HOME} > /dev/null
+        rm "${box}.box"
+        local ret=$?
+    popd > /dev/null
+    return $ret
+}
+
+#####################
+# _GET Function
+#####################
+
+function _get_all_box_names()
+{
+    find ${MYBOX_HOME} -maxdepth 1 -type f -name "*.box" -printf "%f\n"|sed s'/.box//'
+
+    #pushd ${MYBOX_HOME} > /dev/null
+    #for f in $(ls -m1 *.box); do basename $f .box; done;
+    #local ret=$?
+    #popd > /dev/null
+    #return $ret
+}
+
+function _get_all_box_details(){
+    for box in $(_get_all_box_names) ;
+    do
+        __get_box_metadata "${box}"
+    done
+}
+
+function _get_box_detail(){
+    local box=$(basename "$1" ".box")
+    if _check_box_exist ${box}; then
+        __get_box_metadata "${box}"
+    else
+        _err_box_not_found "${box}"; return 1;
     fi
 }
-function _check_box_folder(){
-    # build $BOXFOLDER if not exist
-    if [[ ! -d $BOXFOLDER ]]; then
-        mkdir -p $BOXFOLDER
+function __get_box_metadata()
+{
+    local boxname="$1"
+    local boxfile="${MYBOX_HOME}/${boxname}.box"
+
+    extract_win "${boxfile}" "${boxname}.ovf" "${MYBOX_HOME}" > /dev/null
+
+    if [[ $? == 0 ]];then
+        echo 
+        echo "====================================================================="
+        echo "BOX NAME: $boxname"
+        echo "---------------------------------------------------------------------" 
+        cat "${MYBOX_HOME}/${boxname}.ovf" |grep "vbox:Machine"
     fi
+
+    rm "${MYBOX_HOME}/${boxname}.ovf"
+}
+
+######################
+#
+#_import Functions
+######################
+
+function _import_box_to_vbox_vm() {
+    log_debug $FUNCNAME $@
+    local boxname="$1"
+    local boxfile="${MYBOX_HOME}/$boxname.box"
+    local vm_name="$2"
+
+    if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
+        mkdir -p "${MYBOX_HOME}/${boxname}"
+        untar_win "${boxfile}" "${MYBOX_HOME}/${boxname}"
+    fi
+    vbox_import_ovf "${MYBOX_HOME}/${boxname}/${boxname}.ovf" "$vm_name"
+    return $?
 }
 
 ######################
@@ -147,50 +245,12 @@ function list(){
         vms)
             list_vms "$@"
             ;;
-        nodes)
-            list_nodes
-            ;;
-        boxes)
-            list_boxes
-            ;;
-        boxes*)
-            shift
-            if [[ "$1" == "--detail" ]]; then
-                show_box_detail
-            else
-                usage_list
-            fi
-            ;;
         *)
             usage_list
             ;;
     esac
 }
-function list_boxes()
-{
-    pushd ${MYBOX_HOME} > /dev/null
-    for f in $(ls -m1 *.box); do basename $f .box; done;
-    popd > /dev/null
-}
 
-function show_box_detail(){
-    for box in $(find ${MYBOX_HOME} -type f -name "*.box")
-    do
-        local boxname=$(basename $(to_unix_path $box) .box)
-        echo 
-        echo "====================================================================="
-        echo "BOX NAME: $boxname"
-        echo "---------------------------------------------------------------------"
-        extract_win "${box}" "${boxname}.ovf" "${MYBOX_HOME}" > /dev/null
-        cat "${MYBOX_HOME}/${boxname}.ovf" |grep "vbox:Machine"
-        rm "${MYBOX_HOME}/${boxname}.ovf"
-    done
-}
-
-function list_nodes(){
-    _check_status
-    _get_all_node_name
-}
 
 function list_vms(){
     vbox_list_vm
@@ -207,42 +267,6 @@ function status()
 {
     _check_status
 
-}
-
-function _check_status(){
-    _check_box_conf
-    _check_box_folder
-}
-
-######################
-# IMPORT
-######################
-## A Testing for import
-function import(){
-    local boxname="$1"
-    local box="${MYBOX_HOME}/${boxname}.box"
-    local node_name="$2"
-    if [ ! -e "${box}" ]; then
-        _err_box_not_found "${boxname}"
-        exit 1
-    fi
-    local vm_name=$(_build_uni_vm_name $node_name)
-
-    if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
-        mkdir -p "${MYBOX_HOME}/${boxname}"
-        untar_win "${box}" "${MYBOX_HOME}/${boxname}"
-    fi
-
-    echo "Import MYBOX \"${boxname}\" into VBOX VM \"${vm_name}\""
-
-    vbox_import_vm "${MYBOX_HOME}/${boxname}/${boxname}" "$vm_name"
-
-    if [ "$?" -eq 0 ]; then
-        _set_vmid_to_myboxfolder $vm_name $node_name
-    else
-        echo "Error : Import \"${boxname}\" into VBOX VM \"${vm_name}\" failed! Exit."
-        exit 1
-    fi
 }
 
 function _set_vmid_to_myboxfolder(){
@@ -344,29 +368,7 @@ function start_vm()
 
 }
 
-# Path like this ./.mybox/nodes/<node_name>/vbox/id
-function start_node(){
-    local node_name="$1"
-    local box_name="$2"
-    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
 
-    if [[ ! -z "${vm_id}" ]]; then
-        echo "Start MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
-        if _check_vm_exist_by_id $vm_id; then
-            start_vm ${vm_id}
-            if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" started OK!"; fi
-            return $?
-        fi
-    fi
-    if [[ -z "$box_name" ]];then
-        echo "BOX name is not set, can't do import. exit"
-        exit 1
-    fi
-    import "$box_name" "$node_name"
-    if [[ $? -eq 0 ]]; then #import ok
-        start_node "$node_name" "$box_name"
-    fi
-}
 
 function start_boxes()
 {
@@ -493,7 +495,7 @@ readonly COMMANDS=(
     "mybox:init up down clean provision ssh status"
     "myboxsub:box node vbox vmware"
     "box:add list detail remove pkgvbox impvbox pkgvmware impvmware"
-    "node:list start stop modify remove provision ssh info"
+    "node:list import start stop modify remove provision ssh info"
     "vbox:list start stop modify remove provision ssh info"
     "vmware:list start stop modify remove provision ssh info"
     )
@@ -642,19 +644,25 @@ function help_mybox_box_add(){
 # FUNCTION help_mybox_box_list 
 #----------------------------------
 function help_mybox_box_list(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"box list\" : List MYBOX boxes in user's local MYBOX repository."
+    echo "Usage: $me box list <opts>"
+    echo "    -d|--detail                      Show Box details"
+    echo "    -h, --help                       Print this help"
+
 }
 #----------------------------------
 # FUNCTION help_mybox_box_detail 
 #----------------------------------
 function help_mybox_box_detail(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"box detail\" : Show a MYBOX box in details."
+    echo "Usage: $me box detail <box_name>"
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_box_remove 
 #----------------------------------
 function help_mybox_box_remove(){
-    echo "Remove a existed MYBOX box by given box name from local MYBOX repository."
+    echo "MYBOX subcommand \"box remove\" : Remove a existed MYBOX box by given box name from local MYBOX repository."
     echo "Usage: $me box remove <box_name>"
     echo "    -h, --help                       Print this help"
 }
@@ -662,20 +670,19 @@ function help_mybox_box_remove(){
 # FUNCTION help_mybox_box_pkgvbox 
 #----------------------------------
 function help_mybox_box_pkgvbox(){
-    echo "Create an new MYBOX box by exporting from an existed VirtualBox VM."
+    echo "MYBOX subcommand \"box pkgvbox\" : Create an new MYBOX box by exporting from an existed VirtualBox VM."
     echo "Usage: $me box pkgvbox <vbox_vm_name> <box_name>"
     echo "    -h, --help                       Print this help"
 }
 
-function usage_package(){
-    _print_usage "package <box_name> <vm_name>"
 
-}
 #----------------------------------
 # FUNCTION help_mybox_box_impvbox 
 #----------------------------------
 function help_mybox_box_impvbox(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"box impvbox\" : Import a MYBOX box into a VirtualBox VM."
+    echo "Usage: $me box impvbox <box_name> [<vbox_vm_name>]" 
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_box_pkgvmware 
@@ -695,6 +702,7 @@ function help_mybox_box_impvmware(){
 function help_mybox_node(){
     echo "Node subcommands : The commands to manage MYBOX nodes."
     echo "    node list         list MYBOX nodes in the MYBOX environment"
+    echo "    node import       import a MYBOX Box as a MYBox node"
     echo "    node start        start a MYBOX node by node name"
     echo "    node stop         stop a MYBOX node by node name"
     echo "    node modify       to modify the node settings."
@@ -706,14 +714,30 @@ function help_mybox_node(){
 #----------------------------------
 # FUNCTION help_mybox_node_list 
 #----------------------------------
-function help_mybox_node_list(){
-    _print_not_support $FUNCNAME $@
+function help_mybox_node_list(){        
+    echo "MYBOX subcommand \"node list\" : list all MYBOX nodes in the MYBOX environment."
+    echo "Usage: $me node list" 
+    echo "    -h, --help                       Print this help"
 }
+#----------------------------------
+# FUNCTION help_mybox_node_import 
+#----------------------------------
+function help_mybox_node_import(){
+    echo "MYBOX subcommand \"node import\" : import a MYBOX Box as a MYBox node."
+    echo "Usage: $me node import <box_name> <node_name> [<OPTS>]"
+    echo "    -p|--provider vbox|vmware        vbox (default) : start node as VirtualBox VM "
+    echo "                                     vmware         : start node as VMware VM  "
+    echo "    -f|--force                       force import even the node existed" 
+    echo "    -h, --help                       Print this help"
+}
+
 #----------------------------------
 # FUNCTION help_mybox_node_start 
 #----------------------------------
 function help_mybox_node_start(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"node start\" : start a MYBOX node by node name."
+    echo "Usage: $me node start <node_name>"
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_node_stop 
@@ -988,13 +1012,28 @@ function mybox_box_add(){
 # FUNCTION mybox_box_list 
 #----------------------------------
 function mybox_box_list(){
-    _print_not_support $FUNCNAME $@
+    case "$@" in
+        "")
+            _get_all_box_names
+            ;;
+        -d|--detail)
+            _get_all_box_details
+            ;;
+        *)
+            help_$FUNCNAME
+            ;;
+    esac
+
 }
 #----------------------------------
 # FUNCTION mybox_box_detail 
 #----------------------------------
 function mybox_box_detail(){
-    _print_not_support $FUNCNAME $@
+    if [[ "$#" -gt 1 ]] || [[ -z "$1" ]]; then
+        help_$FUNCNAME
+    else
+        _get_box_detail "$1"
+    fi
 }
 #----------------------------------
 # FUNCTION mybox_box_remove 
@@ -1003,7 +1042,15 @@ function mybox_box_remove(){
     local box="$1"
     if [[ -z $box ]]; then help_mybox_box_remove; return 1; fi;
     if _check_box_exist ${box} ; then
-        echo remove MYBOX \"${box}\" ...
+        if [[ "$2" == "-f" ]] || confirm "Are your sure to remove MYBOX \"${box}\" ..."; then
+            _del_box "${box}"
+            if [[ $? -eq 0 ]]; then 
+                echo "Deleted MYBOX box \"${box}\" successfully!"; 
+            else
+                echo "Failed to delete MYBOX box \"${box}\"!";
+                return 1
+            fi
+        fi
     else
         _err_box_not_found ${box}
         return 1
@@ -1050,8 +1097,22 @@ function mybox_box_pkgvbox(){
 # FUNCTION mybox_box_impvbox 
 #----------------------------------
 function mybox_box_impvbox(){
-    _print_not_support $FUNCNAME $@
+    if [[ "$#" -eq 0 ]]; then help_$FUNCNAME; return 1 ; fi;
+    local box="$1"
+    local vm_name="$2"
+    if ! _check_box_exist ${box}; then
+        _err_box_not_found ${box}
+        return 1
+    fi
+    if [[ -z "$vm_name" ]]; then vm_name=$(_build_uni_vm_name); fi;
+    if _check_vm_exist "${vm_name}"; then
+        _err_vm_exist "${vm_name}"
+        return 1
+    else
+        _import_box_to_vbox_vm "${box}" "$vm_name"
+    fi
 }
+
 #----------------------------------
 # FUNCTION mybox_box_pkgvmware 
 #----------------------------------
@@ -1082,14 +1143,180 @@ function mybox_node(){
 # FUNCTION mybox_node_list 
 #----------------------------------
 function mybox_node_list(){
-    _print_not_support $FUNCNAME $@
+    if ! [[ -z "$1" ]]; then help_$FUNCNAME; return 1;fi
+    _check_status
+    _get_all_node_name
 }
+
 #----------------------------------
 # FUNCTION mybox_node_start 
 #----------------------------------
 function mybox_node_start(){
+    log_debug $FUNCNAME $@
+    if [[ ! -z "$1" ]]; then
+        local node_name="$1"
+        shift
+        if [[ -z "$1" ]]; then
+            local provider="vbox"
+        else
+            if [[ "$1" == "--provider" ]]; then
+                shift
+                case "$1" in
+                    vbox)
+                        $provider="vbox"
+                        ;;
+                    vmware)
+                        $provider="vmware"
+                        ;;
+                    *)
+                        ;;
+                esac
+            fi
+        fi
+        if [[ ! -z $provider ]]; then
+            _start_node_${provider} $node_name
+            return $?
+        fi
+    fi
+    help_$FUNCNAME
+}
+
+function _start_node_vbox(){
+    log_debug $FUNCNAME $@
+    local node_name="$1"
+    local box_name="$2"
+    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
+
+    if [[ ! -z "${vm_id}" ]]; then
+        echo "Start MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
+        if _check_vm_exist_by_id $vm_id; then
+            start_vm ${vm_id}
+            if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" started OK!"; fi
+            return $?
+        fi
+    fi
+    if [[ -z "$box_name" ]];then
+        echo "BOX name is not set, can't do import. exit"
+        exit 1
+    fi
+    _import_node "$box_name" "$node_name"
+    if [[ $? -eq 0 ]]; then #import ok
+        _start_node_vbox "$node_name" "$box_name"
+    fi
+}
+
+# Path like this ./.mybox/nodes/<node_name>/vbox/id
+function start_node(){
+    local node_name="$1"
+    local box_name="$2"
+    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
+
+    if [[ ! -z "${vm_id}" ]]; then
+        echo "Start MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
+        if _check_vm_exist_by_id $vm_id; then
+            start_vm ${vm_id}
+            if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" started OK!"; fi
+            return $?
+        fi
+    fi
+    if [[ -z "$box_name" ]];then
+        echo "BOX name is not set, can't do import. exit"
+        exit 1
+    fi
+    import "$box_name" "$node_name"
+    if [[ $? -eq 0 ]]; then #import ok
+        start_node "$node_name" "$box_name"
+    fi
+}
+
+function _start_node_vmware(){
     _print_not_support $FUNCNAME $@
 }
+
+#----------------------------------
+# FUNCTION mybox_node_import
+#----------------------------------
+function mybox_node_import(){
+    log_debug $FUNCNAME $@
+    if [[ ! -z "$2" ]]; then
+        local box_name="$1"
+        local node_name="$2"
+        local force=0
+        shift
+        shift
+        if [[ -z "$1" ]]; then
+            local provider="vbox"
+        else
+            while [[ ! -z "$1" ]]; do
+                case $1 in
+                    -p|--provider)
+                        shift
+                        provider=$1
+                        ;;
+                    -f|--force)
+                        force=1
+                        shift
+                        ;;
+                    *)
+                        shift
+                        ;;
+                esac
+            done
+        fi
+        if [[ ! -z $provider ]]; then
+            case $provider in
+                vbox|vmware)
+                    _import_node_${provider} $box_name $node_name $force
+                    return $?
+                    ;;
+                *)
+                    log_err "UNKNOWN provider : $provider"
+                    ;;
+            esac
+        fi
+    fi
+    help_$FUNCNAME
+}
+
+function _import_node_vbox(){
+    log_debug $FUNCNAME $@
+    local boxname="$1"
+    local boxfile="${MYBOX_HOME}/$boxname.box"
+    local node_name="$2"
+    local force="$3"
+
+    if _check_node_exist $node_name; then
+        if ! [[ $force -eq 1 ]]  && ! confirm "Node \"$node_name\" are already existed, import will overwrite, are yor sure to continue"; then
+            return 1
+        fi
+    fi
+
+    if ! _check_box_exist ${boxname}; then
+        _err_box_not_found ${boxname}
+        return 1
+    fi
+    local vm_name=$(_build_uni_vm_name $node_name)
+
+    if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
+        mkdir -p "${MYBOX_HOME}/${boxname}"
+        untar_win "${boxfile}" "${MYBOX_HOME}/${boxname}"
+    fi
+
+    vbox_import_ovf "${MYBOX_HOME}/${boxname}/${boxname}.ovf" "$vm_name"
+
+    if [ "$?" -eq 0 ]; then
+        _set_vmid_to_myboxfolder $vm_name $node_name
+    else
+        log_err "Error : Import \"${boxname}\" into VBOX VM \"${vm_name}\" failed!"
+        return 1
+    fi
+}
+
+function _import_node_vmware(){
+     _print_not_support $FUNCNAME $@
+}
+
+
 #----------------------------------
 # FUNCTION mybox_node_stop 
 #----------------------------------
@@ -1356,18 +1583,6 @@ function main(){
                 ;;
     esac
     # case $cmd in
-    #         package*)
-    #             shift
-    #             package "$@"
-    #             ;;
-    #         list*)
-    #             shift
-    #             list $@
-    #             ;;
-    #         import*)
-    #             shift
-    #             import $@
-    #             ;;
     #         start*)
     #             shift
     #             start_ $@
