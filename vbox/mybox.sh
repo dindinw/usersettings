@@ -1240,7 +1240,7 @@ function mybox_vbox_list(){
             shift
             format="$1"
             case "$format" in
-                name|uuid)
+                name|uuid|full|raw)
                     shift
                     ;;
                 *)
@@ -1282,43 +1282,48 @@ function mybox_vbox_list(){
     else
         vbox_list_vm > $vm_list
     fi
-    if [[ -z $format ]]; then
-        echo "VBOX_VM_ID                            STATE     VBOX_VM_NAME                                                "
-        echo "------------------------------------  --------  ------------------------------------------------------------" 
+    
+    if [[ -z $format || "$format" == "raw" ]]; then
+        cat $vm_list
+    else
+        if [[ $format == "full" ]]; then
+            echo "VBOX_VM_ID                            STATE     VBOX_VM_NAME                                                "
+            echo "------------------------------------  --------  ------------------------------------------------------------" 
+        fi    
+            #for evey line in raw result
+            cat $vm_list|while read line; do
+       
+            log_trace "line read : $line"
+            local vm_name=$(echo $line|awk -F'" ' '{print $1}'|sed s'/"//g')
+            local vm_id=$(echo $line|awk -F'" ' '{print $2}'|sed s'/{//'|sed s'/}//')
+            local filter_out=0    
+            # if need to fiter the line
+            if ! [ -z $os ];then
+                filter_out=1
+                log_trace "The selected ostype is \"$os\""
+                log_trace "Checking the ostype for VM \"$vm_name\" uuid \"$vm_id\""
+                local ostype=$(mybox_vbox_info $vm_name -m|grep ostype|sed s'/ostype=//')
+                log_trace "-----------> ostype $ostype"
+                local ostype_s=$(to_lowercase $(echo $ostype|sed s'/"//g'))
+                log_trace "-----------> ostype $ostype_s"
+                if [[ $ostype_s == $os ]]; then
+                    #reformat output
+                    filter_out=0
+                fi
+            fi
+            # if can print out
+            if [[ $filter_out -eq 0 ]];then 
+                if [[ $format == "name" ]]; then
+                    echo $vm_name
+                elif [[ $format == "uuid" ]];then
+                    echo $vm_id
+                elif [[ $format == "full" ]];then
+                    local vm_status=$(mybox_vbox_status "${vm_id}")
+                    printf "%-36s  %-8s  %s \n" "$vm_id" "$vm_status" "$vm_name"
+                fi
+            fi
+        done
     fi
-    #for evey line in raw result
-    cat $vm_list|while read line; do
-   
-        log_trace "line read : $line"
-        local vm_name=$(echo $line|awk '{print $1}'|sed s'/"//g')
-        local vm_id=$(echo $line|awk '{print $2}'|sed s'/{//'|sed s'/}//')
-        local filter_out=0    
-        # if need to fiter the line
-        if ! [ -z $os ];then
-            filter_out=1
-            log_trace "The selected ostype is \"$os\""
-            log_trace "Checking the ostype for VM \"$vm_name\" uuid \"$vm_id\""
-            local ostype=$(mybox_vbox_info $vm_name -m|grep ostype|sed s'/ostype=//')
-            log_trace "-----------> ostype $ostype"
-            local ostype_s=$(to_lowercase $(echo $ostype|sed s'/"//g'))
-            log_trace "-----------> ostype $ostype_s"
-            if [[ $ostype_s == $os ]]; then
-                #reformat output
-                filter_out=0
-            fi
-        fi
-        # if can print out
-        if [[ $filter_out -eq 0 ]];then 
-            if [[ $format == "name" ]]; then
-                echo $vm_name
-            elif [[ $format == "uuid" ]];then
-                echo $vm_id
-            else
-                local vm_status=$(mybox_vbox_status "${vm_id}")
-                printf "%-36s  %-8s  %s \n" $vm_id $vm_status $vm_name
-            fi
-        fi
-    done
     rm $vm_list
 }
 #----------------------------------
