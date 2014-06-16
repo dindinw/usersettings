@@ -1,4 +1,4 @@
-#
+#!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE}" )" && pwd)"
 . $DIR/../lib/core.sh
 . func_create_vm.sh
@@ -684,11 +684,15 @@ function help_mybox_vbox(){
 function help_mybox_vbox_list(){
     echo "MYBOX subcommand \"vbox list\" : list all user's VirtualBox VMs in host machine."
     echo "Usage: $me vbox list [<opts>]"
-    echo "    -f|--format <name|uuid>          format list result only show VM's name or VM id"
-    echo "    -r|--running                     list all running VirtualBox VMs."
-    echo "    -os|--ostype <ubuntu|redhat|     list VMs by os type."
-    echo "                  windows>                               "
-    echo "    -h, --help                       Print this help"
+    echo "    -f,  --format  <name|uuid|        Format list result accordingly."
+    echo "                    full|raw>           name : show vm's name"                                   
+    echo "                                        uuid : show vm's uuid."
+    echo "                                        full : show in a detail table, with vm's id, status, name."
+    echo "                                        raw  : (default) show raw result from VirtualBox."
+    echo "    -r,  --running                    List all running VirtualBox VMs."
+    echo "    -os, --ostype  <ubuntu|redhat|    List VMs by os type."
+    echo "                    windows>                               "
+    echo "    -h,  --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_vbox_start 
@@ -1400,7 +1404,15 @@ function mybox_vbox_modify(){
         fi
     fi
 }
-
+# the idea is , the port should always cleaned before we started the node, so, every time we removed the guest ssh
+# rule and add a new rule with avalible port. user don't need to know what the port it's. 
+# so the solution is : (We only consider TCP port for guestssh)
+# 1. set up a range of port usable for MYBOX. so we can check. use {2251,2300} since vagrant use {2200,2250}
+# 2. get all used port (search forwording rule in all *RUNNING* VM ? or ALL VM?) in vbox 
+# 3. remove the used port form our MYBOX usable port list.
+# 4. try the first one in the list, and check if it used by nc, if not, try next one
+# 5. if ok, add the forwarding rule by the port. 
+# 6. if still fail, error that the usable ports had been used up.
 function _modify_vbox_guestssh(){
     local $vm_name="$1"
     if _check_vbox_guestssh_rule_exist $vm_name ; then
