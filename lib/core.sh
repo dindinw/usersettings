@@ -130,6 +130,13 @@ function confirm(){
     esac
 }
 
+function is_port_open(){
+    local ip="$1"
+    local port="$2"
+    nc -z "$ip" "$port"
+    return $?
+}
+
 # TODO, fixed name, it's not current dir , but the script execute dir
 function executeDir()
 {
