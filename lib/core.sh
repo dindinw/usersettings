@@ -45,9 +45,7 @@ function _log() {
             shift
             echo -e $LOG_STYLE $@ > "${LOG_OUTPUT}"
         fi
-    fi
-
-    
+    fi    
 }
 #default log func will always print
 function log() { 

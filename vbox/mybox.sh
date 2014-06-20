@@ -1294,8 +1294,8 @@ function mybox_vbox_list(){
             echo "VBOX_VM_ID                            STATE     VBOX_VM_NAME                                                "
             echo "------------------------------------  --------  ------------------------------------------------------------" 
         fi    
-            #for evey line in raw result
-            cat $vm_list|while read line; do
+        #for evey line in raw result
+        cat $vm_list|while read line; do
        
             log_trace "line read : $line"
             local vm_name=$(echo $line|awk -F'" ' '{print $1}'|sed s'/"//g')
