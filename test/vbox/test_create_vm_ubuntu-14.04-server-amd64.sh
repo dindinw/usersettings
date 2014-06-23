@@ -24,7 +24,7 @@ cat > $cfg_file << EOL
 default $NAME
 LABEL $NAME
     KERNEL /$NAME/install/vmlinuz
-    APPEND vga=788 initrd=/$NAME/install/initrd.gz auto preseed/url=${ks}/${KS_CFG} \
+    APPEND vga=788 initrd=/$NAME/install/initrd.gz auto preseed/file=/floppy/${KS_CFG} \
         locale=en_US keymap=us \
         interface=eth0 hostname=localhost domain=localdomain --
 EOL

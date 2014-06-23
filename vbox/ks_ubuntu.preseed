@@ -66,7 +66,7 @@ d-i grub-installer/only_debian boolean true
 
 ### Late Command 
 # Wrapping things up
-d-i preseed/late_command string mkdir -p /floppy && mount /dev/fd0 /floppy && cp /floppy/late_command.sh /target/tmp/late_command.sh && in-target chmod +x /tmp/late_command.sh && in-target /tmp/late_command.sh
+d-i preseed/late_command string mkdir -p /floppy && mount /dev/fd0 /floppy && cp /floppy/late_command.sh /target/tmp/late_command.sh && in-target chmod +x /tmp/late_command.sh && in-target /tmp/late_command.sh && umount /floppy
 
 ### Shut down
 d-i finish-install/reboot_in_progress note

@@ -336,10 +336,10 @@ function vbox_wait_vm_shutdown() {
 # install virtualbox guest additions by using vagrant ssh
 function vbox_install_guestadditions(){
 
-    curl --output vagrant_id_rsa -L "https://raw.github.com/mitchellh/vagrant/master/keys/vagrant"
-    if [[ -f vagrant_id_rsa ]]; then
-        chmod 600 vagrant_id_rsa
-        ssh -i vagrant_id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 2222 vagrant@127.0.0.1 "sudo mount /dev/cdrom /media/cdrom; sudo sh /media/cdrom/VBoxLinuxAdditions.run; sudo umount /media/cdrom; sudo shutdown -h now"
+    curl --output mybox_id_rsa -L "https://raw.githubusercontent.com/dindinw/usersettings/master/vbox/keys/mybox"
+    if [[ -f mybox_id_rsa ]]; then
+        chmod 600 mybox_id_rsa
+        ssh -i mybox_id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 2222 mybox@127.0.0.1 "sudo mount /dev/cdrom /media/cdrom; sudo sh /media/cdrom/VBoxLinuxAdditions.run; sudo umount /media/cdrom; sudo shutdown -h now"
     fi
 }
 
