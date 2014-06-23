@@ -12,6 +12,9 @@ function test_check_ports(){
 }
 
 LOG_LEVEL=5
+
+_mybox_usable_ports
+
 echo current range is $MYBOX_USABLE_PORT_RANGE
 test_check_ports 2210 2250 2267 2370
 
@@ -28,3 +31,5 @@ echo current range is $MYBOX_USABLE_PORT_RANGE
 echo but now some ports [$_VBOX_USED_PORT_LIST] has been used 
 echo "Try Vagrant ports range {2200..2250}"
 for p in {2200..2250};do test_check_ports $p ; done
+
+

@@ -1232,7 +1232,46 @@ function mybox_node_provision(){
 # FUNCTION mybox_node_ssh 
 #----------------------------------
 function mybox_node_ssh(){
-    _print_not_support $FUNCNAME $@
+    if [[ -z "$1" ]]; then help_$FUNCNAME; fi;
+    local node_name="$1" 
+    if ! _check_node_exist $node_name; then
+        echo "MYBOX Node \"$node_name\" not found!"
+        return 1
+    fi
+    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
+    if [[ ! -z "${vm_id}" ]]; then
+        if _check_vm_exist_by_id $vm_id; then
+            # set up the ssh guest automatically
+            local current_port=$(_get_vbox_fowarding_port $vm_id)
+
+            log_debug "current guest ssh port is $current_port"
+
+            if [[ ! -z $current_port ]] && is_port_open "127.0.0.1" "$current_port";then
+                log_debug "$current_port is Ok to connect."
+            else
+                # get a new port
+                local port=$(__get_new_usable_port_for_mybox)
+                mybox_vbox_ssh-setup "${vm_id}" -a "$port"
+            fi
+            mybox_vbox_ssh "$vm_id"
+            return $?
+        else
+            log_warn "MYBOX Node \"$node_name\" with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import."
+        fi
+    fi
+
+}
+
+__get_new_usable_port_for_mybox(){
+    local port
+    for p in $(_mybox_usable_ports); do
+        if _check_port_usable $p;then
+            port=$p
+            break;
+        fi
+    done
+    echo "$port"
+
 }
 #----------------------------------
 # FUNCTION mybox_node_info 
@@ -1439,7 +1478,7 @@ function mybox_vbox_modify(){
 function _mybox_usable_ports(){
     local start=$(echo $MYBOX_USABLE_PORT_RANGE|sed 's/\.\..*//')
     local end=$(echo $MYBOX_USABLE_PORT_RANGE|sed 's/.*\.\.//')
-    log_debug $start $end
+    #log_debug $start $end
     for ((port=$start; port<=$end; port++));do
         echo -n "$port "
     done
@@ -1492,7 +1531,7 @@ function _delete_vbox_guestssh(){
 }
 
 function _check_vbox_guestssh_rule_exist(){
-    local $vm_name="$1"
+    local vm_name="$1"
     mybox_vbox_info $vm_name -m|grep "mybox_guestssh" > /dev/null
     return $?
 }
@@ -1646,6 +1685,12 @@ function mybox_vbox_ssh-setup(){
         _err_vm_not_found $vm_name
         return 1
     fi
+
+    if [[ $ssh_show -eq 1 ]];then
+        _get_vbox_fowarding_rule "$vm_name"
+        return $?
+    fi
+    
     if _check_vm_running $vm_name; then
         if [[ $force -eq 1 ]] || confirm "VM \"$vm_name\" is running, need to stop it before it can be modified, continue to stop it"; then
             vbox_stop_vm $vm_name
@@ -1663,10 +1708,7 @@ function mybox_vbox_ssh-setup(){
         _delete_vbox_guestssh $vm_name $ssh_port
         return $?
     fi
-    if [[ $ssh_show -eq 1 ]];then
-        _get_vbox_fowarding_rule "$vm_name"
-        return $?
-    fi
+
     # should not here
     help_$FUNCNAME; return 1 ;
 
