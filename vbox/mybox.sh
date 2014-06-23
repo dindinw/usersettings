@@ -281,7 +281,7 @@ function _import_box_to_vbox_vm() {
 
     if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
         mkdir -p "${MYBOX_HOME}/${boxname}"
-        untar_win "${boxfile}" "${MYBOX_HOME}/${boxname}"
+        untar_win "${boxfile}" "${MYBOX_HOME}/${boxname}" > /dev/null
     fi
     vbox_import_ovf "${MYBOX_HOME}/${boxname}/${boxname}.ovf" "$vm_name"
     return $?
@@ -394,8 +394,8 @@ readonly COMMANDS=(
     "myboxsub:box node vbox vmware"
     "box:add list detail remove pkgvbox impvbox pkgvmware impvmware"
     "node:list import start stop modify remove provision ssh info"
-    "vbox:list start stop modify remove provision ssh info status"
-    "vmware:list start stop modify remove provision ssh info"
+    "vbox:list start stop modify remove ssh info status"
+    "vmware:list start stop modify remove ssh info"
     )
 
 # Remember, # and ## work from the left end (beginning) of string,
@@ -1576,12 +1576,7 @@ function mybox_vbox_remove(){
         _err_vm_not_found $vm_name
     fi   
 }
-#----------------------------------
-# FUNCTION mybox_vbox_provision 
-#----------------------------------
-function mybox_vbox_provision(){
-    _print_not_support $FUNCNAME $@
-}
+
 #----------------------------------
 # FUNCTION mybox_vbox_ssh 
 #----------------------------------
