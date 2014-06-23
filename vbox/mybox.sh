@@ -1,6 +1,6 @@
 #!/bin/bash
-DIR="$( cd "$( dirname "${BASH_SOURCE}" )" && pwd)"
-. $DIR/../lib/core.sh
+MYBOX_HOME_DIR="$( cd "$( dirname "${BASH_SOURCE}" )" && pwd)"
+. $MYBOX_HOME_DIR/../lib/core.sh
 . func_create_vm.sh
 
 me=`basename $0`
@@ -1605,7 +1605,11 @@ function mybox_vbox_ssh(){
         _err_vm_not_found $vm_name
         return 1
     fi
-    ssh -i ~/vagrant.key.private vagrant@127.0.0.1 -p "$port"
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port"
+
+    # or delete the line in ~/.ssh/known_hosts by 
+    # linenumber=$(cat ~/.ssh/known_hosts |grep -n 127.0.0.1]:$port|awk -F':' '{print $1}')
+    # sed -i $line_numberd .ssh/known_hosts
 }
 #----------------------------------
 # FUNCTION mybox_vbox_info 

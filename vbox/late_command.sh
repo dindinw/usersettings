@@ -6,12 +6,12 @@ wget -qO - http://10.0.2.3:8088
 # passwordless sudo
 echo "%sudo   ALL=NOPASSWD: ALL" >> /etc/sudoers
 
-# public ssh key for vagrant user
-mkdir /home/vagrant/.ssh
-wget -O /home/vagrant/.ssh/authorized_keys "https://raw.github.com/mitchellh/vagrant/master/keys/vagrant.pub"
-chmod 755 /home/vagrant/.ssh
-chmod 644 /home/vagrant/.ssh/authorized_keys
-chown -R vagrant:vagrant /home/vagrant/.ssh
+# public ssh key for mybox user
+mkdir /home/mybox/.ssh
+wget -O /home/mybox/.ssh/authorized_keys "https://raw.githubusercontent.com/dindinw/usersettings/master/vbox/keys/mybox.pub"
+chmod 755 /home/mybox/.ssh
+chmod 644 /home/mybox/.ssh/authorized_keys
+chown -R mybox:mybox /home/mybox/.ssh
 
 # speed up ssh
 echo "UseDNS no" >> /etc/ssh/sshd_config

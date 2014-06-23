@@ -12,14 +12,14 @@ d-i debian-installer/locale string en_US
 d-i keymap select us
 
 # Pick any network interface and go with it
-d-i netcfg/get_hostname string vagrant-ubuntu-precise
-d-i netcfg/get_domain string vagrantup.com
+d-i netcfg/get_hostname string mybox-ubuntu-precise
+d-i netcfg/get_domain string mybox.com
 
-### Vagrant
+### Mybox
 d-i passwd/user-fullname string
-d-i passwd/username string vagrant
-d-i passwd/user-password password vagrant
-d-i passwd/user-password-again password vagrant
+d-i passwd/username string mybox
+d-i passwd/user-password password mybox
+d-i passwd/user-password-again password mybox
 d-i user-setup/allow-password-weak boolean true
 d-i user-setup/encrypt-home boolean false
 
