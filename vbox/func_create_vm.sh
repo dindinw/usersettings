@@ -221,8 +221,6 @@ function vbox_creat_vm_linux_default(){
         --biosbootmenu disabled
 
     VBoxManage createhd --filename "${HDD}" --size 8192
-    # Swap is recommended to be double the size of RAM.
-    VBoxManage createhd --filename "${HDD_SWAP}" --size 1226
 
     VBoxManage storagectl ${NAME} \
         --name SATA --add sata --portcount 2 --bootable on
@@ -230,9 +228,7 @@ function vbox_creat_vm_linux_default(){
     VBoxManage storageattach ${NAME} \
         --storagectl SATA --port 0 --type hdd --medium "${HDD}"
     VBoxManage storageattach ${NAME} \
-        --storagectl SATA --port 1 --type hdd --medium "${HDD_SWAP}"
-    VBoxManage storageattach ${NAME} \
-        --storagectl SATA --port 2 --type dvddrive --medium "${INSTALLER}"
+        --storagectl SATA --port 1 --type dvddrive --medium "${INSTALLER}"
 
 }
 
@@ -347,13 +343,13 @@ function vbox_attach_iso(){
     local vm_name="$1"
     local iso="$2"
     VBoxManage storageattach ${vm_name} \
-        --storagectl SATA --port 2 --type dvddrive --medium "${iso}"
+        --storagectl SATA --port 1 --type dvddrive --medium "${iso}"
 }
 
 function vbox_detach_iso(){
     local vm_name="$1"
     VBoxManage storageattach ${vm_name} \
-        --storagectl SATA --port 2 --type dvddrive --medium emptydrive
+        --storagectl SATA --port 1 --type dvddrive --medium emptydrive
 }
 
 function vbox_export_vm(){

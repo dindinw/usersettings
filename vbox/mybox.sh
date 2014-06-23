@@ -50,7 +50,7 @@ function _err_vm_exist(){
 }
 
 function _err_vm_ssh_not_setup(){
-    log_err "VirtualBox VM \"$1\" guest ssh not setup. please use \"vbox modify --ssh\" to setup."
+    log_err "VirtualBox VM \"$1\" guest ssh not setup. please use \"vbox modify <vm_name> --ssh\" to setup."
 }
 
 function _err_not_null(){
@@ -211,6 +211,9 @@ function _check_vm_running_by_id(){
 function _del_box(){
     local box=$(basename "$1" ".box")
     pushd ${MYBOX_HOME} > /dev/null
+        if [[ -e "${box}" ]];then
+            rm -rf "${box}"
+        fi
         rm "${box}.box"
         local ret=$?
     popd > /dev/null
@@ -684,7 +687,6 @@ function help_mybox_vbox(){
     echo "    vbox stop         stop a VirtualBox VM."
     echo "    vbox modify       modify a VirtualBox VM"
     echo "    vbox remove       remove a VM from the User's VirtualBox environment"
-    echo "    vbox provision    pervision on a VirtualBox VM."
     echo "    vbox ssh          connects to a VirtualBox VM."
     echo "    vbox info         show detail information of a VirtualBox VM."
 }
@@ -751,7 +753,7 @@ function help_mybox_vbox_provision(){
 # FUNCTION help_mybox_vbox_ssh 
 #----------------------------------
 function help_mybox_vbox_ssh(){
-    echo "MYBOX subcommand \"vbox remove\" : connect to a VirtualBox VM in host machine by SSH."
+    echo "MYBOX subcommand \"vbox ssh\" : connect to a VirtualBox VM in host machine by SSH."
     echo "Usage: $me vbox ssh <vm_name>|<vm_id>"
     echo "    -h, --help                       Print this help"
 }
@@ -783,7 +785,6 @@ function help_mybox_vmware(){
     echo "    vmware stop       stop a VMWare VM."
     echo "    vmware modify     modify a VMWare VM"
     echo "    vmware remove     remove a VM from user's VMWare environment"
-    echo "    vmware provision  pervision on a VMWare VM."
     echo "    vmware ssh        connects to a VMWare VM."
     echo "    vmware info       show detail information of a VMWare VM."
 }
@@ -815,12 +816,6 @@ function help_mybox_vmware_modify(){
 # FUNCTION help_mybox_vmware_remove 
 #----------------------------------
 function help_mybox_vmware_remove(){
-    _print_not_support $FUNCNAME $@
-}
-#----------------------------------
-# FUNCTION help_mybox_vmware_provision 
-#----------------------------------
-function help_mybox_vmware_provision(){
     _print_not_support $FUNCNAME $@
 }
 #----------------------------------
@@ -1400,7 +1395,9 @@ function mybox_vbox_stop(){
 # FUNCTION mybox_vbox_modify 
 #----------------------------------
 function mybox_vbox_modify(){
-    if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi
+    log_debug INPUT OPTS : $@
+    if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi #error when null
+    case "$1" in -*|--*) help_$FUNCNAME; return 1 ; ;; esac; # error when start with - or --
     local vm_name="$1"
     local force=0
     local ssh=0
@@ -1589,15 +1586,15 @@ function mybox_vbox_provision(){
 # FUNCTION mybox_vbox_ssh 
 #----------------------------------
 function mybox_vbox_ssh(){
+    if [ -z "$1" ];then help_$FUNCNAME;return 1;fi; 
     local vm_name="$1"
     local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
-
-    if [[ -z $port ]];then
-        #port not found
-        _err_vm_ssh_not_setup "$vm_name" 
-        return 1
-    fi
     if _check_vm_exist $vm_name; then
+        if [[ -z $port ]];then
+            #port not found
+            _err_vm_ssh_not_setup "$vm_name" 
+            return 1
+        fi
         if ! _check_vm_running $vm_name; then
             mybox_vbox_start $vm_name
         fi
@@ -1605,7 +1602,21 @@ function mybox_vbox_ssh(){
         _err_vm_not_found $vm_name
         return 1
     fi
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port"
+    if [ -z "$2" ];then
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" 2>/dev/null
+    else
+        if [ -e "$2" ];then
+            ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" < "$2" 2>/dev/null
+        else
+            shift
+            log_warn "Execute remote call directly is dangerous, make sure the commands are included by ' ' "
+            log_debug input is $@
+            echo -n "$@" > debug.sh
+            ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" < debug.sh 2>/dev/null
+            if [ ! $? -eq 0 ]; then exit 1; fi; #exit directly if error
+        fi
+
+    fi
 
     # or delete the line in ~/.ssh/known_hosts by 
     # linenumber=$(cat ~/.ssh/known_hosts |grep -n 127.0.0.1]:$port|awk -F':' '{print $1}')
@@ -1738,7 +1749,7 @@ function _call_command()
             else
                 local cmd=$1
                 shift
-                eval mybox_$cmd $@
+                mybox_$cmd $@
                 return $?
             fi
 
@@ -1748,19 +1759,20 @@ function _call_command()
         # if found, need to go subcomds
         if [[ "$1" == "$cmd_subs" ]]; then
             if [[ -z "$2" || "$2" == "-h" || "$2" == "--help" ]] ; then
-                eval help_mybox_$1
+                help_mybox_$1
                 return $?
             fi
             for subcmd in $(__get_subcommands $cmd_subs); do
                 if [[ "$2" == "$subcmd" ]]; then
                     if [[ "$last_opt" == "-h" || "$last_opt" == "--help" ]]; then
-                        eval help_mybox_$1_$2
+                        help_mybox_$1_$2
                         return $?
                     else
                         local cmd=$1_$2
                         shift
                         shift
-                        eval mybox_$cmd $@
+                        log_debug call mybox_$cmd "$@"
+                        mybox_$cmd "$@"
                         return $?
                     fi
                 fi

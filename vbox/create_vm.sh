@@ -13,7 +13,6 @@ function setup_vars()
     if [[ -z "${HDD}" ]]; then
         HDD="${HOME}/VirtualBox VMs/${NAME}/main.vdi"
     fi
-    HDD_SWAP="${HOME}/VirtualBox VMs/${NAME}/swap.vdi"
     VBOX_FILE="${HOME}/VirtualBox VMs/${NAME}/${NAME}.vbox"
     VBOX_TFTP_DEFAULT="${HOME}/.VirtualBox/TFTP"
     NATNET=10.0.2.0/24
@@ -30,7 +29,6 @@ function setup_vars()
     echo "VM INSTALLER   : ${INSTALLER}"
     echo "GUESTADDITIONS : ${GUESTADDITIONS}"
     echo "HDD            : ${HDD}"
-    echo "HDD_SWAP       : ${HDD_SWAP}"
     echo "VBOX_FILE      : ${VBOX_FILE}"
     echo "TFTP_PATH      : ${TFTP_PATH}"
     echo "HOST KS SERV   : ${IP}:${PORT}"
