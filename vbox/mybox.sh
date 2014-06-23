@@ -50,7 +50,7 @@ function _err_vm_exist(){
 }
 
 function _err_vm_ssh_not_setup(){
-    log_err "VirtualBox VM \"$1\" guest ssh not setup. please use \"vbox modify <vm_name> --ssh\" to setup."
+    log_err "VirtualBox VM \"$1\" guest ssh not setup. please use \"vbox ssh-setup <vm_name> <port>\" to setup."
 }
 
 function _err_not_null(){
@@ -394,7 +394,7 @@ readonly COMMANDS=(
     "myboxsub:box node vbox vmware"
     "box:add list detail remove pkgvbox impvbox pkgvmware impvmware"
     "node:list import start stop modify remove provision ssh info"
-    "vbox:list start stop modify remove ssh info status"
+    "vbox:list start stop modify remove ssh ssh-setup info status"
     "vmware:list start stop modify remove ssh info"
     )
 
@@ -688,7 +688,9 @@ function help_mybox_vbox(){
     echo "    vbox modify       modify a VirtualBox VM"
     echo "    vbox remove       remove a VM from the User's VirtualBox environment"
     echo "    vbox ssh          connects to a VirtualBox VM."
+    echo "    vbox ssh-setup    setup geust ssh to a VirtualBox VM."
     echo "    vbox info         show detail information of a VirtualBox VM."
+    echo "    vbox status       show the vm state (on/off) of a VirtualBox VM."
 }
 #----------------------------------
 # FUNCTION help_mybox_vbox_list 
@@ -728,8 +730,6 @@ function help_mybox_vbox_stop(){
 function help_mybox_vbox_modify(){
     echo "MYBOX subcommand \"vbox modify\" : modify a VirtualBox VM in host machine."
     echo "Usage: $me vbox modify <vm_name>|<vm_id>"
-    echo "    --ssh <port>                     Set Guset SSH port for the VM."
-    echo "    --ssh delete                     Remove the Guest SSH from the VM."
     echo "    -f, --force                      force to do modify." 
     echo "    -h, --help                       Print this help"
 
@@ -743,18 +743,25 @@ function help_mybox_vbox_remove(){
     echo "    -f, --force                      force to remove." 
     echo "    -h, --help                       Print this help"
 }
-#----------------------------------
-# FUNCTION help_mybox_vbox_provision 
-#----------------------------------
-function help_mybox_vbox_provision(){
-    _print_not_support $FUNCNAME $@
-}
+
 #----------------------------------
 # FUNCTION help_mybox_vbox_ssh 
 #----------------------------------
 function help_mybox_vbox_ssh(){
     echo "MYBOX subcommand \"vbox ssh\" : connect to a VirtualBox VM in host machine by SSH."
     echo "Usage: $me vbox ssh <vm_name>|<vm_id>"
+    echo "    -h, --help                       Print this help"
+}
+
+#----------------------------------
+# FUNCTION help_mybox_vbox_ssh-setup
+#----------------------------------
+function help_mybox_vbox_ssh-setup(){
+    echo "MYBOX subcommand \"vbox ssh-setup\" : set up guest SSH mapping port to a VirtualBox VM in the host machine ."
+    echo "Usage: $me vbox ssh-setup <vm_name>|<vm_id>"
+    echo "    -a, --add <port>                 Set Guset SSH port for the VM."
+    echo "    -d, --delete                     Remove the Guest SSH from the VM."
+    echo "    -s, --show                       Show current settings."
     echo "    -h, --help                       Print this help"
 }
 #----------------------------------
@@ -1395,34 +1402,17 @@ function mybox_vbox_stop(){
 # FUNCTION mybox_vbox_modify 
 #----------------------------------
 function mybox_vbox_modify(){
-    log_debug INPUT OPTS : $@
+    log_debug $FUNCNAME INPUT OPTS : $@
     if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi #error when null
     case "$1" in -*|--*) help_$FUNCNAME; return 1 ; ;; esac; # error when start with - or --
     local vm_name="$1"
     local force=0
-    local ssh=0
     shift
     while [[ ! -z "$1" ]];do
         case "$1" in
             -f|--force)
                 shift
                 force=1
-                ;;
-            --ssh)
-                shift
-                ssh=1
-                if [[ ! -z "$1" ]];then 
-                    if is_port "$1";then
-                        local ssh_add=1
-                        local ssh_port=$1
-                        shift
-                    elif [[ "$1" == "delete" ]];then
-                        local ssh_delete=1
-                        shift
-                    fi
-                else
-                    help_$FUNCNAME; return 1 ;
-                fi
                 ;;
             **)
                 shift
@@ -1442,16 +1432,8 @@ function mybox_vbox_modify(){
             return 1
         fi
     fi
+    # TODO 
 
-    if [[ $ssh -eq 1 ]];then
-        if [[ $ssh_add -eq 1 ]];then
-            _modify_vbox_guestssh $vm_name $ssh_port
-        fi
-        if [[ $ssh_delete -eq 1 ]];then
-            _delete_vbox_guestssh $vm_name $ssh_port
-        fi
-
-    fi
 }
 
 function _mybox_usable_ports(){
@@ -1617,6 +1599,79 @@ function mybox_vbox_ssh(){
     # linenumber=$(cat ~/.ssh/known_hosts |grep -n 127.0.0.1]:$port|awk -F':' '{print $1}')
     # sed -i $line_numberd .ssh/known_hosts
 }
+
+#----------------------------------
+# FUNCTION mybox_vbox_ssh-setup
+#----------------------------------
+function mybox_vbox_ssh-setup(){
+    log_debug $FUNCNAME INPUT OPTS : $@
+    if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi #error when null
+    case "$1" in -*|--*) help_$FUNCNAME; return 1 ; ;; esac; # error when start with - or --
+    
+    local vm_name="$1"
+    local force=0
+
+    shift
+    while [[ ! -z "$1" ]];do
+        case "$1" in
+            -f|--force)
+                shift
+                force=1
+                ;;
+            -a|--add)
+                shift
+                if [[ ! -z "$1" ]] && is_port "$1";then
+                    local ssh_add=1
+                    local ssh_port=$1
+                    shift
+                else
+                    help_$FUNCNAME; return 1 ;
+                fi
+                ;;
+            -d|--delete)
+                shift
+                local ssh_delete=1
+                ;;
+            -s|--show)
+                shift
+                local ssh_show=1
+                ;;
+            **)
+                shift
+                help_$FUNCNAME; return 1 ;
+                ;;
+        esac
+    done
+    if ! _check_vm_exist $vm_name; then
+        _err_vm_not_found $vm_name
+        return 1
+    fi
+    if _check_vm_running $vm_name; then
+        if [[ $force -eq 1 ]] || confirm "VM \"$vm_name\" is running, need to stop it before it can be modified, continue to stop it"; then
+            vbox_stop_vm $vm_name
+        else
+            #cancle modify and exit
+            return 1
+        fi
+    fi
+
+    if [[ $ssh_add -eq 1 ]];then
+        _modify_vbox_guestssh $vm_name $ssh_port
+        return $?
+    fi
+    if [[ $ssh_delete -eq 1 ]];then
+        _delete_vbox_guestssh $vm_name $ssh_port
+        return $?
+    fi
+    if [[ $ssh_show -eq 1 ]];then
+        _get_vbox_fowarding_rule "$vm_name"
+        return $?
+    fi
+    # should not here
+    help_$FUNCNAME; return 1 ;
+
+}
+
 #----------------------------------
 # FUNCTION mybox_vbox_info 
 #----------------------------------
