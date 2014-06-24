@@ -345,6 +345,9 @@ function _get_vmid_from_myboxfolder(){
 
     if [[ -f "${id_file}" ]]; then 
         vm_id="$(cat "$id_file"|awk '{print $2}'|sed s'/{//'|sed s'/}//')"
+    else
+        log_err "vm_id file is not found in MYBOX environment. It's may a damaged MYBOX environment, You may need to re-do init."
+        return 1
     fi;
 
     echo $vm_id
@@ -357,6 +360,13 @@ function _get_mybox_node_path(){
         node_name="${MYBOX}_${DEFAULT_NODE}"
     fi
     echo "${BOXFOLDER}/nodes/${node_name}/vbox/id"
+}
+
+function _remove_mybox_node_path(){
+    local node_name="$1"
+    if [[ ! -z $node_name ]] && [[ -e "${BOXFOLDER}/nodes/${node_name}" ]]; then
+        rm -rf "${BOXFOLDER}/nodes/${node_name}"
+    fi
 }
 
 function _get_all_node_name(){
@@ -645,7 +655,9 @@ function help_mybox_node_start(){
 # FUNCTION help_mybox_node_stop 
 #----------------------------------
 function help_mybox_node_stop(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"node stop\" : stop a MYBOX node by node name."
+    echo "Usage: $me node stop <node_name>"
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_node_modify 
@@ -669,7 +681,9 @@ function help_mybox_node_provision(){
 # FUNCTION help_mybox_node_ssh 
 #----------------------------------
 function help_mybox_node_ssh(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"node ssh\" : connect to a MYBOX node by SSH."
+    echo "Usage: $me node ssh <node_name>"
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_node_info 
@@ -1178,6 +1192,7 @@ function _start_node(){
             return $?
         else
             log_warn "MYBOX Node \"$node_name\" with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import."
+            return 1
         fi
     fi
 }
@@ -1193,7 +1208,7 @@ function mybox_node_stop(){
     if [[ -z "$1" ]]; then help_$FUNCNAME; fi;
     local node_name="$1" 
     if ! _check_node_exist $node_name; then
-        echo "MYBOX Node \"$node_name\" not found!"
+        _err_node_not_found ${node_name}
         return 1
     fi
     local vm_id=$(_get_vmid_from_myboxfolder $node_name)
@@ -1206,6 +1221,7 @@ function mybox_node_stop(){
             return $?
         else
             log_warn "MYBOX Node \"$node_name\" with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import."
+            return 1
         fi
     fi
 }
@@ -1220,7 +1236,58 @@ function mybox_node_modify(){
 # FUNCTION mybox_node_remove 
 #----------------------------------
 function mybox_node_remove(){
-    _print_not_support $FUNCNAME $@
+    log_debug $FUNCNAME $@
+    local node_name="$1"
+    local force=0
+    local provider="vbox"
+    shift
+
+    while [[ ! -z "$1" ]]; do
+            case $1 in
+                -p|--provider)
+                    shift;
+                    case "$1" in
+                        vbox|vmware)
+                            provider=$1
+                            ;;
+                        *)
+                            log_err "UNKNOWN provider : $1"
+                            help_$FUNCNAME; return 1 ;
+                            ;;
+                    esac
+                    ;;
+                -f|--force)
+                    force=1
+                    shift
+                    ;;
+                 *)
+                    help_$FUNCNAME; return 1 ;
+                    ;;
+            esac
+    done
+
+    if ! _check_node_exist $node_name; then
+        _err_node_not_found ${node_name}
+        return 1
+    fi
+    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
+
+    if [[ ! -z "${vm_id}" ]];then
+        if [ $force -eq 1 ] || confirm "are your sure to remove MYBOX Node \"$node_name\""; then
+            echo "Removing MYBOX Node \"$node_name\" with $(to_uppercase $provider) VM \"{$vm_id}\" ..."
+            mybox_${provider}_remove "${vm_id}" --force
+            if [[ ! $? -eq 0 ]]; then
+                log_warn "Error when try to removing Node \"$node_name\"'s backend $(to_uppercase $provider) VM \"{$vm_id}\""
+            else 
+                _remove_mybox_node_path ${node_name}
+                if [[ $? -eq 0 ]]; then
+                    echo "Removing MYBOX Node \"$node_name\" done!"
+                fi
+            fi
+        fi
+    fi
+    
+
 }
 #----------------------------------
 # FUNCTION mybox_node_provision 
@@ -1602,6 +1669,7 @@ function mybox_vbox_remove(){
 # FUNCTION mybox_vbox_ssh 
 #----------------------------------
 function mybox_vbox_ssh(){
+    log_debug $FUNCNAME INPUT OPTS : $@
     if [ -z "$1" ];then help_$FUNCNAME;return 1;fi; 
     local vm_name="$1"
     local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
@@ -1651,6 +1719,7 @@ function mybox_vbox_ssh-setup(){
     local force=0
 
     shift
+    if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi #error when null
     while [[ ! -z "$1" ]];do
         case "$1" in
             -f|--force)
