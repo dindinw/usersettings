@@ -669,7 +669,12 @@ function help_mybox_node_modify(){
 # FUNCTION help_mybox_node_remove 
 #----------------------------------
 function help_mybox_node_remove(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"node remove\" : remove a MYBOX node by node name."
+    echo "Usage: $me node remove <node_name>"
+    echo "    -p|--provider vbox|vmware        vbox (default) : remove node, backend VM is VirtualBox VM "
+    echo "                                     vmware         : remove node, backend VM is  VMware VM  "
+    echo "    -f|--force                       force remove" 
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_node_provision 
@@ -689,7 +694,9 @@ function help_mybox_node_ssh(){
 # FUNCTION help_mybox_node_info 
 #----------------------------------
 function help_mybox_node_info(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"node info\" : show information of a MYBOX node."
+    echo "Usage: $me node ssh <node_name>"
+    echo "    -h, --help                       Print this help"
 }
 #==================================
 # FUNCTION help_mybox_vbox 
@@ -1344,7 +1351,20 @@ __get_new_usable_port_for_mybox(){
 # FUNCTION mybox_node_info 
 #----------------------------------
 function mybox_node_info(){
-    _print_not_support $FUNCNAME $@
+    log_debug $FUNCNAME $@
+    local node_name="$1"
+    local provider="vbox"
+
+    if ! _check_node_exist $node_name; then
+        _err_node_not_found ${node_name}
+        return 1
+    fi
+    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
+
+    if [[ ! -z "${vm_id}" ]];then
+        mybox_vbox_info ${vm_id} -m
+    fi
+
 }
 
 ################################################################################
