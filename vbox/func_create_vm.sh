@@ -299,6 +299,12 @@ function vbox_show_vm_info_machinereadable()
     vbox_show_vm_info "$1" "--machinereadable"
 }
 
+function vbox_modifyvm(){
+    local vm_name="$1"
+    log_debug "VBoxManage modifyvm ${vm_name} $2 $3"
+    VBoxManage modifyvm ${vm_name} $2 $3
+}
+
 
 # Usage:
 # VBoxManage modifyvm [--natpf<1-N> [<rulename>],tcp|udp,[<hostip>],<hostport>,[<guestip>],<guestport>]
