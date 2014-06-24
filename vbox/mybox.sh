@@ -617,7 +617,7 @@ function help_mybox_node(){
     echo "    node import       import a MYBOX Box as a MYBox node"
     echo "    node start        start a MYBOX node by node name"
     echo "    node stop         stop a MYBOX node by node name"
-    echo "    node modify       to modify the node settings."
+ #   echo "    node modify       to modify the node settings."
     echo "    node remove       remove a MYBOX node from the MYBOX environment"
     echo "    node provision    pervision on a MYBOX node."
     echo "    node ssh          connects to a MYBOX node."
@@ -662,9 +662,14 @@ function help_mybox_node_stop(){
 #----------------------------------
 # FUNCTION help_mybox_node_modify 
 #----------------------------------
-function help_mybox_node_modify(){
-    _print_not_support $FUNCNAME $@
-}
+# function help_mybox_node_modify(){
+#     echo "MYBOX subcommand \"node modify\" : modify a MYBOX node by node name."
+#     echo "Usage: $me node nodify <node_name> <--key> <value>"
+#     echo "    -p|--provider vbox|vmware        vbox (default) : modify node, backend VM is VirtualBox VM "
+#     echo "                                     vmware         : modify node, backend VM is  VMware VM  "
+#     echo "    -f|--force                       force modify" 
+#     echo "    -h, --help                       Print this help"
+# }
 #----------------------------------
 # FUNCTION help_mybox_node_remove 
 #----------------------------------
@@ -1363,12 +1368,51 @@ function mybox_node_stop(){
     fi
 }
 
+# should not allow modify vm in node level
 #----------------------------------
 # FUNCTION mybox_node_modify 
 #----------------------------------
-function mybox_node_modify(){
-    _print_not_support $FUNCNAME $@
-}
+# function mybox_node_modify(){
+#         log_debug $FUNCNAME $@
+#     local node_name="$1"
+#     local force=0
+#     local provider="vbox"
+#     shift
+
+#     while [[ ! -z "$1" ]]; do
+#             case $1 in
+#                 -p|--provider)
+#                     shift;
+#                     case "$1" in
+#                         vbox|vmware)
+#                             provider=$1
+#                             ;;
+#                         *)
+#                             log_err "UNKNOWN provider : $1"
+#                             help_$FUNCNAME; return 1 ;
+#                             ;;
+#                     esac
+#                     ;;
+#                 -f|--force)
+#                     force=1
+#                     shift
+#                     ;;
+#                  *)
+#                     local key="$1"
+#                     local value="$2"
+#                     shift 2
+#                     ;;
+#             esac
+#     done
+#     if ! _check_node_exist $node_name; then
+#         _err_node_not_found ${node_name}
+#         return 1
+#     fi
+#     local vm_id=$(_get_vmid_from_myboxfolder $node_name)
+
+#     mybox_${provider}_modify -f "$key" "$value"
+# }
+
 #----------------------------------
 # FUNCTION mybox_node_remove 
 #----------------------------------
