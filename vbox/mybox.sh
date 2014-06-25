@@ -400,7 +400,7 @@ function _build_uni_vm_name(){
 ################################################################################
 
 readonly COMMANDS=(
-    "mybox:init up down clean provision ssh status"
+    "mybox:init config up down clean provision ssh status"
     "myboxsub:box node vbox vmware"
     "box:add list detail remove pkgvbox impvbox pkgvmware impvmware"
     "node:list import start stop modify remove provision ssh info"
@@ -439,6 +439,7 @@ function usage()
     echo "User subcommands : The commands target for the MYBOX environment which defined" 
     echo "                   by a Mybox configration file. \"$BOXCONF\"  by default."
     echo "    init           initializes a new MYBOX environment by creating a \"$BOXCONF\""
+    echo "    config         show/edit the MYBOX environment by \"$BOXCONF\""
     echo "    up             starts and provisions the MYBOX environment by \"$BOXCONF\""
     echo "    down           stops the MYBOX nodes in the MYBOX environment."
     echo "    clean          stops and deletes all MYBOX nodes in the MYBOX environment."
@@ -491,14 +492,23 @@ function _print_not_support(){
 # FUNCTION help_mybox_init 
 #==================================
 function help_mybox_init(){
-    echo "Usage: $me init [box_name]"
+    echo "Usage: $me init                      initializes a new MYBOX environment by creating a \"$BOXCONF\""
     echo "    -h, --help                       Print this help"
 }
+
+#==================================
+# FUNCTION help_mybox_config
+#==================================
+function help_mybox_config(){
+    echo "Usage: $me config"
+    echo "    -h, --help                       Print this help"
+}
+
 #==================================
 # FUNCTION help_mybox_up 
 #==================================
 function help_mybox_up(){
-    echo "Usage: $me up [node_name]"
+    echo "Usage: $me up"
     echo "    -h, --help                       Print this help"
 }
 
@@ -1040,11 +1050,76 @@ cat <<EOF > "$BOXCONF"
 [node 2 ]
     box=REHL64
     vbox.modifyvm.memory=1024
-[node 2 ]
+
+[node 3 ]
     box=CentOS65-64
     vbox.modifyvm.memory=1024
 EOF
     echo "Init a box config under $PWD/$BOXCONF successfully!"
+}
+#==================================
+# FUNCTION mybox_config 
+#==================================
+function mybox_config(){
+    _check_status
+    _show_myboxconf_machinereadable "$1" "$2"
+}
+
+function _show_myboxconf_machinereadable(){
+    # 1. remove comments line
+    cat $BOXCONF | sed s'/^.*#.*$//' > tmp_$BOXCONF
+    # 2. Parse [box] selction
+    #cat tmp_$BOXCONF
+    if [ -z "$1" ]; then
+        cat tmp_$BOXCONF
+        return 0
+    fi
+    if [[ "$1" == "-l" ]];then
+        for node_i in $(__get_node_index_list $tmp_$BOXCONF);do
+            log_debug $node_i
+            log_debug __get_node_keys_from_conf "tmp_$BOXCONF" "node" "$node_i"
+            echo "from node $node_i"
+             __get_node_keys_from_conf "tmp_$BOXCONF" "node" "$node_i"
+        done
+    fi
+    if [ -z "$2" ]; then
+        __get_box_keys_from_conf "tmp_$BOXCONF" "$1"
+    else
+        __get_node_keys_from_conf "tmp_$BOXCONF" "$1" "$2"
+    fi
+}
+
+function __get_box_keys_from_conf(){
+  local conf_file="$1"
+  local group_name="$2"
+  #echo $(grep -m 1 -P '^\['$group_name'](?:\r?\n(?:[^[\r\n].*)?)*' $CONF_FILE | sed '/\[.*$/d')
+  sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
+    -e 's/;.*$//' \
+    -e 's/[[:space:]]*$//' \
+    -e 's/^[[:space:]]*//' \
+    -e "s/^\(.*\)=\([^\"']*\)$/\1=\"\2\"/" \
+   < $conf_file \
+    | sed -n -e "/^\[$group_name\]/,/^\s*\[/{/^[^;].*\=.*/p;}"
+}
+
+function __get_node_keys_from_conf()
+{
+
+  local conf_file="$1"
+  local group_name="$2"
+  #echo $(grep -m 1 -P '^\['$group_name'](?:\r?\n(?:[^[\r\n].*)?)*' $CONF_FILE | sed '/\[.*$/d')
+  sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
+    -e 's/;.*$//' \
+    -e 's/[[:space:]]*$//' \
+    -e 's/^[[:space:]]*//' \
+    -e "s/^\(.*\)=\([^\"']*\)$/\1=\"\2\"/" \
+   < $conf_file \
+    | sed -n -e "/^\[$group_name $3 \]/,/^\s*\[/{/^[^;].*\=.*/p;}"
+}
+
+function __get_node_index_list(){
+    local conf_file="$1"
+    echo $(egrep "\[node.*" $conf_file|sed s'/\[node//'|sed s'/]//')
 }
 
 #==================================
@@ -2104,9 +2179,9 @@ function _call_command()
 
     for cmd_user in $MYBOX_CMDS; do
         if [[ "$1" == "$cmd_user" ]]; then
-            echo "verify command $@ ok!"
+            log_debug "verify command $@ ok!"
             if [[ "$last_opt" == "-h" || "$last_opt" == "--help" ]]; then 
-                eval help_mybox_$1
+                help_mybox_$1
                 return $?
             else
                 local cmd=$1
