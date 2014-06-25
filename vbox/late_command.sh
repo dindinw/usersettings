@@ -19,6 +19,13 @@ echo "UseDNS no" >> /etc/ssh/sshd_config
 # display login promt after boot
 sed "s/quiet splash//" /etc/default/grub > /tmp/grub
 mv /tmp/grub /etc/default/grub
+
+# set GRUB_RECORDFAIL_TIMEOUT=0 to avoid recovery menu is being displayed.
+grep -q "^GRUB_RECORDFAIL_TIMEOUT=" /etc/default/grub \
+    && sed "s/^GRUB_RECORDFAIL_TIMEOUT=.*/GRUB_RECORDFAIL_TIMEOUT=0/" /etc/default/grub > /tmp/grub \
+    || sed "$ a\GRUB_RECORDFAIL_TIMEOUT=0" /etc/default/grub > /tmp/grub
+mv /tmp/grub /etc/default/grub
+
 update-grub
 
 # clean up
