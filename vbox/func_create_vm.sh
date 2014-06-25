@@ -328,12 +328,28 @@ function vbox_guestssh_remove(){
 }
 
 function vbox_wait_vm_shutdown() {
-    local vm_name="$1"
-    while VBoxManage list runningvms | grep "${vm_name}" >/dev/null; do
+    local vm_id="$1"
+    while VBoxManage list runningvms | grep "${vm_id}" >/dev/null; do
         sleep 20
         echo -n "."
     done
     echo ""
+}
+
+function vbox_wait_vm_started() {
+    local vm_id="$1"
+    local max_sec="$2"
+    local count=0
+    while ! VBoxManage list runningvms | grep "${vm_id}" >/dev/null; do
+        sleep 1
+        echo -n "."
+        let count=count+1
+        if [ $count -gt $max_sec ]; then
+            return 1
+        fi
+    done
+    echo ""
+
 }
 # install virtualbox guest additions by using vagrant ssh
 function vbox_install_guestadditions(){

@@ -1013,7 +1013,7 @@ function help_mybox_vmware_info(){
 function mybox_init(){
     local box="$1"
 
-    if [[ -z ${box} ]] ; then box="UnknownBox"; fi;
+    if [[ -z ${box} ]] ; then box="Trusty64"; fi;
 
     if [ "$#" -gt 1 ] ; then 
         help_mybox_init
@@ -1027,21 +1027,22 @@ function mybox_init(){
     fi
 
 cat <<EOF > "$BOXCONF"
-    # box config 
+# MYBOX box config file
 [box] 
     box=${box}
-    
     node.name=${MYBOX}_${DEFAULT_NODE}
     vbox.modifyvm.memory=512
 # node
-[node 1]
-    vbox.modifyvm.name="another_name_node1"
-    vbox.modifyvm.memory=1024
+[node 1 ]
+    node.name="node1"
     vbox.modifyvm.nictype1="82540EM"
 
-[node 2]
+[node 2 ]
     box=REHL64
-    vbox.modifyvm.memory=2048
+    vbox.modifyvm.memory=1024
+[node 2 ]
+    box=CentOS65-64
+    vbox.modifyvm.memory=1024
 EOF
     echo "Init a box config under $PWD/$BOXCONF successfully!"
 }
@@ -1480,7 +1481,7 @@ function mybox_node_provision(){
 # FUNCTION mybox_node_ssh 
 #----------------------------------
 function mybox_node_ssh(){
-    if [[ -z "$1" ]]; then help_$FUNCNAME; fi;
+    if [[ -z "$1" ]] || [[ $# -gt 1 ]]; then help_$FUNCNAME; fi;
     local node_name="$1" 
     if ! _check_node_exist $node_name; then
         echo "MYBOX Node \"$node_name\" not found!"
@@ -1671,6 +1672,8 @@ function mybox_vbox_start(){
         return 1;
     fi
     vbox_start_vm ${vm_name} "headless"
+    vbox_wait_vm_started ${vm_id} 60
+    return $?
 }
 
 #----------------------------------
@@ -1883,6 +1886,7 @@ function mybox_vbox_ssh(){
         _err_vm_not_found $vm_name
         return 1
     fi
+
     if [ -z "$2" ];then
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" 2>/dev/null
     else
