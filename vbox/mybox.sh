@@ -493,6 +493,8 @@ function _print_not_support(){
 #==================================
 function help_mybox_init(){
     echo "Usage: $me init                      initializes a new MYBOX environment by creating a \"$BOXCONF\""
+    echo "    -b, --box-name                   the box name which the MYBOX environment is set up. the default is \"Trusty64\" ."
+    echo "    -f, --force                      force to overwrite the \"$BOXCONF\"."
     echo "    -h, --help                       Print this help"
 }
 
@@ -500,7 +502,15 @@ function help_mybox_init(){
 # FUNCTION help_mybox_config
 #==================================
 function help_mybox_config(){
-    echo "Usage: $me config"
+    echo "Usage: $me config                    config the \"$BOXCONF\""
+    echo "    -p, --print                      print the clean-formated \"$BOXCONF\" file"
+    echo "    -l, --list                       list all config items"
+    echo "    -a, --add <sec_name [index]> <key> <value>"  
+    echo "                                     add (or set if exist) a config item to box/node section, node section need a index number"
+    echo "    -g, --get <sec_name [index]> <key>"
+    echo "                                     get a config item in a section"
+    echo "    -r, --remove <sec_name [index]> [key]"
+    echo "                                     remove a config item or a section in config file"
     echo "    -h, --help                       Print this help"
 }
 
@@ -1021,8 +1031,16 @@ function help_mybox_vmware_info(){
 #   program error and exist. need to remove it manaually before running.
 #=============================================================================
 function mybox_init(){
-    local box="$1"
-
+    log_debug $@
+    local box=
+    local force=0
+    while [[ ! -z "$1" ]];do
+        case "$1" in
+            -f|--force) shift; force=1; ;;
+            -b|--box-name) shift; box="$1"; shift; ;;
+            *) shift; help_$FUNCNAME; return 1; ;;
+        esac
+    done
     if [[ -z ${box} ]] ; then box="Trusty64"; fi;
 
     if [ "$#" -gt 1 ] ; then 
@@ -1031,7 +1049,7 @@ function mybox_init(){
     fi
     _check_box_folder #create box folder if not created
 
-    if [[ -e "$BOXCONF" ]]; then
+    if [[ -e "$BOXCONF" ]] && [[ $force -eq 0 ]]; then
         _err_boxconf_exist_when_init
         exit 0
     fi
@@ -1039,21 +1057,24 @@ function mybox_init(){
 cat <<EOF > "$BOXCONF"
 # MYBOX box config file
 [box] 
-    box=${box}
-    node.name=${MYBOX}_${DEFAULT_NODE}
-    vbox.modifyvm.memory=512
+    box.name=${box}
+    vbox.modify.memory=512
 # node
 [node 1 ]
-    node.name="node1"
-    vbox.modifyvm.nictype1="82540EM"
+    node.name="master"
+    vbox.modify.nictype1="82540EM"
 
 [node 2 ]
-    box=REHL64
-    vbox.modifyvm.memory=1024
+    box.name=REHL64
+    vbox.modify.memory=1024
 
 [node 3 ]
-    box=CentOS65-64
-    vbox.modifyvm.memory=1024
+    box.name=CentOS65-64
+    vbox.modify.memory=1024
+
+[node 4 ]
+    box.name=CentOS65
+    vbox.modify.memory=1024
 EOF
     echo "Init a box config under $PWD/$BOXCONF successfully!"
 }
@@ -1062,64 +1083,251 @@ EOF
 #==================================
 function mybox_config(){
     _check_status
-    _show_myboxconf_machinereadable "$1" "$2"
+
+    while [[ ! -z "$1" ]];do
+        case "$1" in
+            -p|--print)
+                shift
+                if [[ -z "$1" ]];then 
+                    _print_format_conf $BOXCONF
+                    return $?
+                fi
+                ;;
+            -l|--list)
+                shift
+                if [[ -z "$1" ]];then 
+                    _list_all_in_conf $BOXCONF
+                    return $?
+                fi
+                ;;
+            -a|--add)
+                shift
+                log_debug "$@"
+                _set_value_to_conf $BOXCONF "$@"
+                return $?
+                ;;
+            -g|--get)
+                shift
+                # format clean
+                _get_value_from_conf $BOXCONF "$@"
+                return $?
+                ;;
+            -r|--remove)
+                shift
+                _remove_value_from_conf $BOXCONF "$@"
+                return $?
+                
+                ;;
+            *)
+                help_$FUNCNAME; return 1;
+                ;;
+        esac
+    done
+    help_$FUNCNAME; return 1;
 }
 
-function _show_myboxconf_machinereadable(){
-    # 1. remove comments line
-    cat $BOXCONF | sed s'/^.*#.*$//' > tmp_$BOXCONF
-    # 2. Parse [box] selction
-    #cat tmp_$BOXCONF
-    if [ -z "$1" ]; then
-        cat tmp_$BOXCONF
-        return 0
+function _print_format_conf(){
+    local conf_file="$1"
+    if [[ -e $conf_file ]]; then
+        __clean_format_conf_with_comments $conf_file > tmp_$conf_file
+        cat tmp_$conf_file
+        rm tmp_$conf_file
     fi
-    if [[ "$1" == "-l" ]];then
-        for node_i in $(__get_node_index_list $tmp_$BOXCONF);do
-            log_debug $node_i
-            log_debug __get_node_keys_from_conf "tmp_$BOXCONF" "node" "$node_i"
-            echo "from node $node_i"
-             __get_node_keys_from_conf "tmp_$BOXCONF" "node" "$node_i"
+}
+
+function _list_all_in_conf(){
+    local conf_file="$1"
+    if [[ -e $conf_file ]]; then
+        __clean_format_conf  $conf_file > tmp_$conf_file
+        log_debug "__get_value_from_config tmp_$conf_file box"
+        __get_value_from_config "tmp_$conf_file" "box"
+        for node_i in $(__get_node_index_list $tmp_$conf_file);do
+            log_debug __get_value_from_config "tmp_$conf_file" "node" "$node_i"
+            __get_value_from_config "tmp_$conf_file" "node" "$node_i"
         done
+        rm tmp_$conf_file
     fi
-    if [ -z "$2" ]; then
-        __get_box_keys_from_conf "tmp_$BOXCONF" "$1"
+
+    return $?
+}
+
+function _get_value_from_conf(){
+    log_debug $@
+    local conf_file="$1"
+    shift
+
+    if [[ -e $conf_file ]]; then
+        
+        __clean_format_conf  $conf_file > tmp_$conf_file
+        
+        log_debug "__get_value_from_config tmp_$conf_file $@"
+        __get_value_from_config "tmp_$conf_file" $@
+
+        rm tmp_$conf_file
+    fi
+    return $?
+
+}
+
+function __clean_format_conf(){
+    local conf_file="$1"
+    if [[ -e $conf_file ]]; then
+        sed -e '/\s*#.*/d' \
+            -e '/^$/d' \
+            -e 's/\s*\=\s*/=/g' \
+            -e 's/\s*$//' \
+            -e 's/^\s*//' \
+            -e "s/^\(.*\)=\([^\"']*\)$/\1=\"\2\"/" \
+            -e 's/^\(.*\)=\(.*\)$/    \1=\2/' < $conf_file
+    fi
+}
+
+function __clean_format_conf_with_comments(){
+    local conf_file="$1"
+    if [[ -e $conf_file ]]; then
+        sed -e 's/\s*\=\s*/=/g' \
+            -e 's/\s*$//' \
+            -e 's/^\s*//' \
+            -e "s/^\(.*\)=\([^\"']*\)$/\1=\"\2\"/" \
+            -e 's/^\(.*\)=\(.*\)$/    \1=\2/' < $conf_file
+    fi
+}
+
+#
+# The function can parse a config file in .ini format, with addtion support for index, like 
+# [sec-name]
+#    key=val
+# [sec-name 1]
+#    key1=val1
+# [sec-name 2]
+# How sed work:
+#  remove comments line, # or ;
+#  remove extra spaces at begin and end of the line
+#  reomve extra spaces between =
+# Sed's group command :
+#   /begin/,/end/ {
+#        s/old/new/
+#   }
+#  
+function __get_value_from_config(){
+    log_debug $FUNCNAME "$@"
+  
+    local conf_file="$1"
+    local sec_name="$2"
+    
+    if is_number "$3"; then
+        # is a indexed section
+        local sec_index="$3"
+        local key="$4"
+
+        if [[ -z $key ]]; then
+            cat $conf_file \
+                | sed -n -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[/ {/^[^;].*\=.*/p;}" | sed -e "s/^\s*//"
+        else
+            cat $conf_file \
+                | sed -n -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[/ {/^[^;].*\=.*/p;}" | sed -e "s/^\s*//" | grep "^$key="
+        fi
     else
-        __get_node_keys_from_conf "tmp_$BOXCONF" "$1" "$2"
+        local key="$3"
+        if [[ -z $key ]];then
+            cat $conf_file \
+                | sed -n -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[/ {/^[^#].*\=.*/p} " | sed -e "s/^\s*//"
+        else
+            cat $conf_file \
+                | sed -n -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[/ {/^[^#].*\=.*/p} " | sed -e "s/^\s*//" | grep "^$key="
+        fi
     fi
 }
 
-function __get_box_keys_from_conf(){
-  local conf_file="$1"
-  local group_name="$2"
-  #echo $(grep -m 1 -P '^\['$group_name'](?:\r?\n(?:[^[\r\n].*)?)*' $CONF_FILE | sed '/\[.*$/d')
-  sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
-    -e 's/;.*$//' \
-    -e 's/[[:space:]]*$//' \
-    -e 's/^[[:space:]]*//' \
-    -e "s/^\(.*\)=\([^\"']*\)$/\1=\"\2\"/" \
-   < $conf_file \
-    | sed -n -e "/^\[$group_name\]/,/^\s*\[/{/^[^;].*\=.*/p;}"
+function _set_value_to_conf(){
+    log_debug $FUNCNAME "$@"
+    local conf_file="$1"
+    local sec_name="$2"
+          
+    local key
+    local value
+    local sec_index
+
+    case $sec_name in 
+        box) 
+            key="$3"
+            value="$4"
+            ;;
+        node)
+            sec_index="$3"
+            key="$4"
+            value="$5"
+            ;;
+        *)
+            log_err "Not support section name $sec_name."
+            return 1
+            ;;
+    esac
+
+    log_debug $sec_name $sec_index $key $value
+    if [[ -z $key ]] || [[ -z $value ]]; then return 1; fi;
+
+    if [[ -z "$sec_index" ]]; then
+        # for section without index
+        __clean_format_conf $conf_file \
+            |sed -n -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[./ {p}" |grep "^[[:space:]]\{4\}$key=" >/dev/null
+        if [[ $? -eq 1 ]]; then # no-exist,add new
+            log_debug "$key not exist in $sec_name , add new one"
+            sed -e "/^\[\s*$sec_name\s*\]/a\ \ \ \ $key\=$value" < $conf_file > tmp_$conf_file
+        else
+            log_debug "$key exist in $sec_name, change the old one"
+            sed -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[.*$/ {s/^\(\s*$key\s*\)\=.*/\1\=$value/}" < $conf_file > tmp_$conf_file
+        fi
+    else
+        # for indexed section
+        __clean_format_conf $conf_file \
+            |sed -n -e "/^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[.*$/ {p}" |grep "^[[:space:]]\{4\}$key=" >/dev/null
+        if [[ $? -eq 1 ]]; then # no-exist,add new
+            log_debug "$key not exist in $sec_name $sec_index, add new one"
+            sed -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/a\ \ \ \ $key\=$value" < $conf_file > tmp_$conf_file
+        else
+            log_debug "$key exist in $sec_name $sec_index, change the old one"
+            sed -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[.*$/ {s/^\(\s*$key\s*\)\=.*/\1\=$value/}" < $conf_file > tmp_$conf_file
+        fi
+    fi
+    mv tmp_$conf_file $conf_file
 }
 
-function __get_node_keys_from_conf()
-{
+function _remove_value_from_conf(){
+    log_debug $FUNCNAME "$@"
+    local conf_file="$1"
+    local sec_name="$2"
 
-  local conf_file="$1"
-  local group_name="$2"
-  #echo $(grep -m 1 -P '^\['$group_name'](?:\r?\n(?:[^[\r\n].*)?)*' $CONF_FILE | sed '/\[.*$/d')
-  sed -e 's/[[:space:]]*\=[[:space:]]*/=/g' \
-    -e 's/;.*$//' \
-    -e 's/[[:space:]]*$//' \
-    -e 's/^[[:space:]]*//' \
-    -e "s/^\(.*\)=\([^\"']*\)$/\1=\"\2\"/" \
-   < $conf_file \
-    | sed -n -e "/^\[$group_name $3 \]/,/^\s*\[/{/^[^;].*\=.*/p;}"
+    if is_number "$3";then
+        local sec_index="$3"
+        local key="$4"
+    else
+        local key="$3"
+    fi
+
+    log_debug $sec_name $sec_index $key
+
+    if [[ ! -z $key ]]; then
+        # remove entire section
+        if [[ -z "$sec_index" ]];then
+            sed -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[.*$/ {/^\s*$key\s*\=.*/d}" < $conf_file > tmp_$conf_file
+        else
+            sed -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[.*$/ {/^\s*$key\s*\=.*/d}" < $conf_file > tmp_$conf_file
+        fi
+    else
+        if [[ -z "$sec_index" ]];then
+            sed -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[.*$/ {/^.*\s*\=.*/d}" < $conf_file > tmp_$conf_file
+        else
+            sed -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[.*$/ {/^.*\s*\=.*/d}" < $conf_file > tmp_$conf_file
+        fi
+    fi
+
+    mv tmp_$conf_file $conf_file
 }
 
 function __get_node_index_list(){
     local conf_file="$1"
-    echo $(egrep "\[node.*" $conf_file|sed s'/\[node//'|sed s'/]//')
+    echo $(egrep "\[node.*" $conf_file|sed -e s'/\[node//' -e s'/]//')
 }
 
 #==================================
