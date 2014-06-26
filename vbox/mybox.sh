@@ -1307,17 +1307,20 @@ function _remove_value_from_conf(){
     log_debug $sec_name $sec_index $key
 
     if [[ ! -z $key ]]; then
-        # remove entire section
+        # remove by key in a section
         if [[ -z "$sec_index" ]];then
             sed -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[.*$/ {/^\s*$key\s*\=.*/d}" < $conf_file > tmp_$conf_file
         else
             sed -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[.*$/ {/^\s*$key\s*\=.*/d}" < $conf_file > tmp_$conf_file
         fi
     else
+        # remove entire section
         if [[ -z "$sec_index" ]];then
-            sed -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[.*$/ {/^.*\s*\=.*/d}" < $conf_file > tmp_$conf_file
+            sed -e " /^\[\s*$sec_name\s*\]/ , /^\s*\[.*$/ {/^.*\s*\=.*/d}" \
+                -e "/^\[\s*$sec_name\s*\]/d" < $conf_file > tmp_$conf_file
         else
-            sed -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[.*$/ {/^.*\s*\=.*/d}" < $conf_file > tmp_$conf_file
+            sed -e " /^\[\s*$sec_name\s\s*$sec_index\s*\]/ , /^\s*\[.*$/ {/^.*\s*\=.*/d}" \
+                -e "/^\[\s*$sec_name\s\s*$sec_index\s*\]/d" < $conf_file > tmp_$conf_file
         fi
     fi
 
