@@ -1139,11 +1139,10 @@ function _list_all_in_conf(){
     local conf_file="$1"
     if [[ -e $conf_file ]]; then
         __clean_format_conf  $conf_file > tmp_$conf_file
-        log_debug "__get_value_from_config tmp_$conf_file box"
-        __get_value_from_config "tmp_$conf_file" "box"
+
+        __get_value_from_config "tmp_$conf_file" "box" | sed -e "s/\(.*\)/box.\1/"
         for node_i in $(__get_node_index_list $tmp_$conf_file);do
-            log_debug __get_value_from_config "tmp_$conf_file" "node" "$node_i"
-            __get_value_from_config "tmp_$conf_file" "node" "$node_i"
+            __get_value_from_config "tmp_$conf_file" "node" "$node_i" | sed -e "s/\(.*\)/node.$node_i.\1/"
         done
         rm tmp_$conf_file
     fi
