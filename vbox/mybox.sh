@@ -1034,10 +1034,12 @@ function mybox_init(){
     log_debug $@
     local box=
     local force=0
+    local template="default"
     while [[ ! -z "$1" ]];do
         case "$1" in
             -f|--force) shift; force=1; ;;
             -b|--box-name) shift; box="$1"; shift; ;;
+            -t|--template) shift; template="$1"; shift; ;;
             *) shift; help_$FUNCNAME; return 1; ;;
         esac
     done
@@ -1054,7 +1056,36 @@ function mybox_init(){
         exit 0
     fi
 
+    case "$template" in
+        default)
 cat <<EOF > "$BOXCONF"
+# MYBOX box config file
+[box] 
+    box.name=${box}
+    vbox.modify.memory=512
+# node
+[node 1 ]
+
+EOF
+            ;;
+        test1)
+            cat <<EOF > "$BOXCONF"
+# MYBOX box config file
+[box] 
+    box.name=${box}
+    vbox.modify.memory=512
+# node
+[node 1 ]
+    node.name="master"
+    vbox.modify.nictype1="82540EM"
+
+[node 2 ]
+    node.name="slave"
+    vbox.modify.memory=1024
+EOF
+            ;;
+        test2)
+            cat <<EOF > "$BOXCONF"
 # MYBOX box config file
 [box] 
     box.name=${box}
@@ -1076,6 +1107,8 @@ cat <<EOF > "$BOXCONF"
     box.name=CentOS65
     vbox.modify.memory=1024
 EOF
+            ;;
+    esac
     echo "Init a box config under $PWD/$BOXCONF successfully!"
 }
 #==================================
@@ -1338,8 +1371,7 @@ function __get_node_index_list(){
 function mybox_up(){
     _check_status
 
-    echo UP MYBOX environment by using \"${boxconf}\" ...
-
+    echo UP MYBOX environment by using \"${BOXCONF}\" ...
 
     # Read confg
     #  1. find Box, and verify if exist
@@ -1348,6 +1380,32 @@ function mybox_up(){
     #    1.) id not found or found not exist in vbox), import box, and save id into box_folder
     #    2.) start vms by id from box_folder
 
+    local base_box=$(__get_box_config "box.name")
+    local base_memory=$(__get_box_config "vbox.modify.memory")
+    echo "The base box name is $base_box , memory is $base_memory"
+
+    for node_index in $(__get_node_index_list "$BOXCONF") ; do
+        local node_name=$(__get_node_config $node_index "node.name")
+        local node_box=$(__get_node_config $node_index "box.name")
+        local node_memory=$(__get_node_config $node_index "vbox.modify.memory")
+        if [[ -z $node_name ]]; then node_name="node$node_index"; fi;
+        if [[ -z $node_box ]]; then node_box="$base_box"; fi;
+        if [[ -z $node_memory ]]; then node_memory="$base_memory"; fi;
+        echo "Try to start MYBOX Node [ $node_index ] : $node_name, box=$node_box, memory=$node_memory..."
+        # check if the node exist, if not import it, else start it
+        _check_node_exist $node_name
+    done
+}
+
+function __get_box_config() {
+    local key="$1"
+    mybox_config -g box $key | sed -e 's/.*=//' -e 's/"//g'
+}
+
+function __get_node_config() {
+    local node_index="$1"
+    local key="$2"
+    mybox_config -g node $node_index $key | sed -e 's/.*=//' -e 's/"//g'
 }
 #==================================
 # FUNCTION mybox_down 
