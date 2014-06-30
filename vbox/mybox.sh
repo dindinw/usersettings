@@ -309,6 +309,9 @@ function _import_node_vbox(){
     _import_box_to_vbox_vm "${boxname}" "${vm_name}"
 
     if [ "$?" -eq 0 ]; then
+        # if import to vbox ok, then set up the metadata info in the mybox folder.
+        __set_node_metadata $node_name "provider" "vbox"
+        __set_node_metadata $node_name "box" $box_name
         _set_vmid_to_myboxfolder $vm_name $node_name
         echo "Import \"${boxname}\" to MYBOX Node \"$node_name\" under VBOX VM \"${vm_name}\" successfully!"
     else
@@ -322,44 +325,58 @@ function _import_node_vmware(){
 }
 
 function _set_vmid_to_myboxfolder(){
-    
     local vm_name="$1"
     local node_name="$2"
-
     local vm_id=$(vbox_list_vm|grep ^\"$vm_name\")
-
-    local id_file=$(_get_mybox_node_path $node_name)
-
-    local id_dir=$(dirname "${id_file}")
-
-    #echo $id_dir
-    if [[ ! -e "$id_dir" ]]; then mkdir -p "${id_dir}" ; fi;
-    echo "$vm_id" > $id_file
+    __set_node_metadata "$node_name" id "$vm_id"
 }
 
+#
+# id file Format:
+# Vbox : "vm_name" {vm_uuid}
+#        "test1" {d21067ab-ea7f-42b0-a0db-a33ac8dc768e}
+# VWMware : TODO
+# 
 function _get_vmid_from_myboxfolder(){
-    
     local node_name="$1"
-    local id_file="$(_get_mybox_node_path $node_name)"    
-    local vm_id=""
-
-    if [[ -f "${id_file}" ]]; then 
-        vm_id="$(cat "$id_file"|awk '{print $2}'|sed s'/{//'|sed s'/}//')"
-    else
-        log_err "vm_id file is not found in MYBOX environment. It's may a damaged MYBOX environment, You may need to re-do init."
-        return 1
-    fi;
-
-    echo $vm_id
+    local vm_id=$(__get_node_metadata "$node_name" "id")
+    if [[ ! -z "$vm_id" ]]; then
+        echo $vm_id|awk '{print $2}'|sed -e s'/{//' -e s'/}//'
+    fi
 }
 
-# "$BOXFOLDER/nodes/$node_name/vbox/id"
-function _get_mybox_node_path(){
+# "$BOXFOLDER/nodes/$node_name/"
+function __get_mybox_node_path(){
     local node_name="$1"
     if [ -z ${node_name} ]; then
         node_name="${MYBOX}_${DEFAULT_NODE}"
     fi
-    echo "${BOXFOLDER}/nodes/${node_name}/vbox/id"
+    echo "${BOXFOLDER}/nodes/${node_name}/"
+}
+
+function __get_mybox_node_id_path(){
+    __get_mybox_node_path "$1" | sed 's/\(.*\)/\1id/'
+}
+
+function __set_node_metadata(){
+    local node_name="$1"
+    local key="$2"
+    shift 2
+    local value="$@"
+    local metadata_file=$(__get_mybox_node_path $node_name | sed "s/\(.*\)/\1$key/")
+    if [[ ! -e $metadata_file ]]; then
+        mkdir -p $(dirname $metadata_file)
+    fi
+    echo "$value" > $metadata_file 
+}
+
+function __get_node_metadata(){
+    local node_name="$1"
+    local key="$2"
+    local metadata_file=$(__get_mybox_node_path $node_name | sed "s/\(.*\)/\1$key/")
+    if [[ -f $metadata_file ]]; then
+        cat $metadata_file
+    fi
 }
 
 function _remove_mybox_node_path(){
@@ -1101,10 +1118,9 @@ EOF
 
 [node 3 ]
     box.name=CentOS65-64
-    vbox.modify.memory=1024
 
 [node 4 ]
-    box.name=CentOS65
+    box.name=Precise64
     vbox.modify.memory=1024
 EOF
             ;;
@@ -1184,15 +1200,12 @@ function _list_all_in_conf(){
 }
 
 function _get_value_from_conf(){
-    log_debug $@
     local conf_file="$1"
     shift
-
     if [[ -e $conf_file ]]; then
         
         __clean_format_conf  $conf_file > tmp_$conf_file
         
-        log_debug "__get_value_from_config tmp_$conf_file $@"
         __get_value_from_config "tmp_$conf_file" $@
 
         rm tmp_$conf_file
@@ -1242,7 +1255,7 @@ function __clean_format_conf_with_comments(){
 #   }
 #  
 function __get_value_from_config(){
-    log_debug $FUNCNAME "$@"
+    #log_debug $FUNCNAME "$@"
   
     local conf_file="$1"
     local sec_name="$2"
@@ -1370,7 +1383,7 @@ function __get_node_index_list(){
 #==================================
 function mybox_up(){
     _check_status
-
+    echo
     echo UP MYBOX environment by using \"${BOXCONF}\" ...
 
     # Read confg
@@ -1381,20 +1394,85 @@ function mybox_up(){
     #    2.) start vms by id from box_folder
 
     local base_box=$(__get_box_config "box.name")
-    local base_memory=$(__get_box_config "vbox.modify.memory")
+    local base_provider=$(__get_box_config "box.provider")
+
     echo "The base box name is $base_box , memory is $base_memory"
 
     for node_index in $(__get_node_index_list "$BOXCONF") ; do
         local node_name=$(__get_node_config $node_index "node.name")
         local node_box=$(__get_node_config $node_index "box.name")
-        local node_memory=$(__get_node_config $node_index "vbox.modify.memory")
         if [[ -z $node_name ]]; then node_name="node$node_index"; fi;
         if [[ -z $node_box ]]; then node_box="$base_box"; fi;
-        if [[ -z $node_memory ]]; then node_memory="$base_memory"; fi;
-        echo "Try to start MYBOX Node [ $node_index ] : $node_name, box=$node_box, memory=$node_memory..."
-        # check if the node exist, if not import it, else start it
-        _check_node_exist $node_name
+        #default provider is vbox
+        if [[ -z $base_provider ]]; then base_provider="vbox"; fi;
+        echo 
+        echo "Try to start MYBOX Node [ $node_index ] : $node_name, box=$node_box, memory=$node_memory provider=$base_provider ..."
+        
+        # check if the node exist
+        if ! _check_node_exist $node_name; then
+            #import vm
+            mybox_node_import "$node_box" "$node_name" -p "$base_provider"
+            if [[ ! $? -eq 0 ]];then
+                log_err "MYBOX import $node_box to $node_name under $base_provider failed."
+                continue
+            fi
+        fi
+
+        for modify_item in $(__get_modify_items $node_index); do
+            local modify_key=${modify_item%%=*}
+            local modify_value=${modify_item#*=}
+            log_debug "$modify_item --> $modify_key , $modify_value"
+            if _check_node_need_modify "$node_name" "$modify_key" "$modify_value"; then
+                # modify only support vbox now
+                mybox_node_modify "$node_name" "--$modify_key" "$modify_value" -p "$base_provider"
+            fi
+        done
+
+        #start vm
+        mybox_node_start "$node_name"
     done
+}
+
+function _check_node_need_modify(){
+    local node_name="$1"
+    local key="$2"
+    local value="$3"
+    local current_value=$(mybox_node_info $node_name | grep "$key" | sed -e "s/.*=//" -e "s/\"//g")
+    log_debug "? $current_value == $value"
+    if [[ "$current_value" == "$value" ]]; then
+        return 1
+    else
+        log_debug "$node_name's setting item $key $current_value -> $value, need to modify"
+        return 0
+    fi
+}
+
+#TODO, support more modify keys add here!
+readonly VBOX_MODIFYVM_KEYS="memory nictype1 nictype2 nictype3 nictype4"
+
+function __get_modify_items(){
+    local node_index="$1"
+    for base in $(mybox_config -g box);do
+        echo $base|grep "^vbox.modify." > dev/null
+        if [[ $? -eq 0 ]]; then
+            eval $(echo $base|sed "s/vbox.modify.//")
+        fi
+    done
+    for item in $(mybox_config -g node $node_index);do
+        echo $item|grep "^vbox.modify." > dev/null
+        if [[ $? -eq 0 ]]; then
+           eval $(echo $item|sed "s/vbox.modify.//")
+        fi
+    done
+    for key in $VBOX_MODIFYVM_KEYS; do
+        eval local value=\$"$key"
+        #echo $value
+        if [[ ! -z  "$value" ]];then
+            echo $key=$value
+            unset $key
+        fi
+    done
+
 }
 
 function __get_box_config() {
@@ -1411,13 +1489,22 @@ function __get_node_config() {
 # FUNCTION mybox_down 
 #==================================
 function mybox_down(){
-    _print_not_support $FUNCNAME $@
+    if [[ "$1" == "-f" ]] || confirm "Are your sure to shutdown all the VMs in your MYBOX environment"; then
+        for node in $(mybox_node_list); do
+            mybox_node_stop $node
+        done
+    fi
 }
 #==================================
 # FUNCTION mybox_clean 
 #==================================
 function mybox_clean(){
-    _print_not_support $FUNCNAME $@
+    if [[ "$1" == "-f" ]] || confirm "Are your sure to remove all the VMs in your MYBOX environment"; then
+        for node in $(mybox_node_list); do
+            mybox_node_remove $node -f
+        done
+
+    fi
 }
 #==================================
 # FUNCTION mybox_provision 
@@ -1712,50 +1799,60 @@ function mybox_node_stop(){
     fi
 }
 
-# should not allow modify vm in node level
 #----------------------------------
 # FUNCTION mybox_node_modify 
 #----------------------------------
-# function mybox_node_modify(){
-#         log_debug $FUNCNAME $@
-#     local node_name="$1"
-#     local force=0
-#     local provider="vbox"
-#     shift
+function mybox_node_modify(){
+    log_debug $FUNCNAME $@
+    local node_name="$1"
+    local force=0
+    local provider="vbox"
+    shift
 
-#     while [[ ! -z "$1" ]]; do
-#             case $1 in
-#                 -p|--provider)
-#                     shift;
-#                     case "$1" in
-#                         vbox|vmware)
-#                             provider=$1
-#                             ;;
-#                         *)
-#                             log_err "UNKNOWN provider : $1"
-#                             help_$FUNCNAME; return 1 ;
-#                             ;;
-#                     esac
-#                     ;;
-#                 -f|--force)
-#                     force=1
-#                     shift
-#                     ;;
-#                  *)
-#                     local key="$1"
-#                     local value="$2"
-#                     shift 2
-#                     ;;
-#             esac
-#     done
-#     if ! _check_node_exist $node_name; then
-#         _err_node_not_found ${node_name}
-#         return 1
-#     fi
-#     local vm_id=$(_get_vmid_from_myboxfolder $node_name)
-
-#     mybox_${provider}_modify -f "$key" "$value"
-# }
+    while [[ ! -z "$1" ]]; do
+            case $1 in
+                -p|--provider)
+                    shift;
+                    case "$1" in
+                        vbox|vmware)
+                            provider="$1"
+                            ;;
+                        *)
+                            log_err "UNKNOWN provider : $1"
+                            help_$FUNCNAME; return 1 ;
+                            ;;
+                    esac
+                    shift
+                    ;;
+                -f|--force)
+                    force=1
+                    shift
+                    ;;
+                 *)
+                    local key="$1"
+                    local value="$2"
+                    shift 2
+                    ;;
+            esac
+    done
+    if ! _check_node_exist $node_name; then
+        _err_node_not_found ${node_name}
+        return 1
+    fi
+    local vm_id=$(_get_vmid_from_myboxfolder $node_name)
+    if [[ ! -z "${vm_id}" ]]; then
+        if _check_vm_exist_by_id $vm_id; then
+            mybox_${provider}_modify "$vm_id" -f "$key" "$value"
+            return $?
+        else
+            log_err "MYBOX Node \"$node_name\" with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import."
+            return 1
+        fi
+    else
+        log_err "MYBOX Node \"$node_name\" can find metadata vm_id. the VBOX environment may damaged, please clean up it."
+        return 1
+    fi
+}
 
 #----------------------------------
 # FUNCTION mybox_node_remove 
