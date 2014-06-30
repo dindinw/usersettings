@@ -1406,7 +1406,7 @@ function mybox_up(){
         #default provider is vbox
         if [[ -z $base_provider ]]; then base_provider="vbox"; fi;
         echo 
-        echo "Try to start MYBOX Node [ $node_index ] : $node_name, box=$node_box, memory=$node_memory provider=$base_provider ..."
+        echo "Try to start MYBOX Node [ $node_index ] : $node_name, box=$node_box, provider=$base_provider ..."
         
         # check if the node exist
         if ! _check_node_exist $node_name; then
