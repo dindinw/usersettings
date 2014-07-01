@@ -1516,13 +1516,33 @@ function mybox_provision(){
 # FUNCTION mybox_ssh 
 #==================================
 function mybox_ssh(){
-    _print_not_support $FUNCNAME $@
+    PS3="Type a number or 'q' to quit: "
+    local NODES=$(mybox_node_list)
+    select node in $NODES; do
+        if [[ ! -z $node ]] && _check_node_exist $node; then
+            mybox_node_ssh $node
+        fi
+        break
+    done
 }
 #==================================
 # FUNCTION mybox_status 
 #==================================
 function mybox_status(){
-    _print_not_support $FUNCNAME $@
+    for node in $(mybox_node_list);do
+        local box=$(__get_node_metadata "$node" "box")
+        local provider=$(__get_node_metadata "$node" "provider")
+        echo
+                                                                                   echo "NODE NAME: $node"
+                                                                                   echo "    MYBOX: $box"
+                                                                                   echo " PROVIDER: $provider"
+        mybox_node_info $node >_tmp_${node}_info
+        cat _tmp_${node}_info |grep ^ostype=      |sed -e "s/.*=//" -e "s/\"//g" -e "s/^/ GUEST OS: /"
+        cat _tmp_${node}_info |grep ^name=        |sed -e "s/.*=//" -e "s/\"//g" -e "s/^/  VM NAME: /"
+        cat _tmp_${node}_info |grep ^VMState=     |sed -e "s/.*=//" -e "s/\"//g" -e "s/^/ VM STATE: /"
+
+        rm  _tmp_${node}_info
+    done
 }
 
 ################################################################################
