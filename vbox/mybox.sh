@@ -1811,7 +1811,12 @@ function mybox_node_start(){
         local node_name="$1"
         if _check_node_exist "${node_name}" ; then
             _start_node $node_name
-            return $?
+            if [[ $? -eq 0 ]]; then
+                echo "MYBOX Node \"$node_name\" started successfully!"
+                return 0
+            else
+                return $?
+            fi
         else
             _err_node_not_found ${node_name}
             return 1
@@ -2019,7 +2024,8 @@ function mybox_node_provision(){
         log_debug "provision marker is $marker"
         if [[ $marker == "done" ]];then
             if [[ $force -eq 0 ]]; then
-                if [[ $quiet -eq 1 ]] || ! confirm "Pervisioned MYBOX Node \"$node_name\", are your sure you want to do it again"; then
+                echo "MYBOX Node \"$node_name\" has been provisioned already."
+                if [[ $quiet -eq 1 ]] || ! confirm "Are your sure you want to do it again"; then
                     return 1
                 fi
             fi
