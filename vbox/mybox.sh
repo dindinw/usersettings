@@ -420,8 +420,8 @@ readonly COMMANDS=(
     "mybox:init config up down clean provision ssh status"
     "myboxsub:box node vbox vmware"
     "box:add list detail remove pkgvbox impvbox pkgvmware impvmware"
-    "node:list import start stop modify remove provision ssh info"
-    "vbox:list start stop modify remove ssh ssh-setup info status"
+    "node:list import start stop modify remove provision ssh scp info"
+    "vbox:list start stop modify remove ssh ssh-setup scp info status"
     "vmware:list start stop modify remove ssh info"
     )
 
@@ -1102,15 +1102,16 @@ EOF
 EOF
             ;;
         test2)
-            cat <<EOF > "$BOXCONF"
+            cat <<"EOF" > "$BOXCONF"
 # MYBOX box config file
 [box] 
-    box.name=${box}
+    box.name=Trusty64
     vbox.modify.memory=512
 # node
 [node 1 ]
     node.name="master"
     vbox.modify.nictype1="82540EM"
+    node.provision="c:\test.sh"
 
 [node 2 ]
     box.name=REHL64
@@ -1118,7 +1119,9 @@ EOF
 
 [node 3 ]
     box.name=CentOS65-64
-
+    node.provision=<<INLINE_SCRIPT
+        echo "exected provision script in $(uname -a)"
+    INLINE_SCRIPT
 [node 4 ]
     box.name=Precise64
     vbox.modify.memory=1024
@@ -1510,7 +1513,17 @@ function mybox_clean(){
 # FUNCTION mybox_provision 
 #==================================
 function mybox_provision(){
-    _print_not_support $FUNCNAME $@
+_check_status
+    echo
+    echo Provision MYBOX environment by using \"${BOXCONF}\" ...
+    for node_index in $(__get_node_index_list "$BOXCONF") ; do
+        local node_name=$(__get_node_config $node_index "node.name")
+        if [[ -z $node_name ]]; then node_name="node$node_index"; fi;
+        echo 
+        echo "Try to provision MYBOX Node [ $node_index ] : $node_name ..."
+        mybox_node_provision $node_name $node_index $1
+    done
+
 }
 #==================================
 # FUNCTION mybox_ssh 
@@ -1534,6 +1547,8 @@ function mybox_ssh(){
         fi
     fi
 }
+
+
 #==================================
 # FUNCTION mybox_status 
 #==================================
@@ -1956,14 +1971,69 @@ function mybox_node_remove(){
 #----------------------------------
 # FUNCTION mybox_node_provision 
 #----------------------------------
+
+readonly _INLINE_PROVISION_SCRIPT_NAME="mybox_inline_provision_script.sh"
+
 function mybox_node_provision(){
-    _print_not_support $FUNCNAME $@
+    log_debug $FUNCNAME $@
+
+    local node_name="$1"
+    local node_index="$2"
+    local force=0
+    case $3 in -f|--force) force=1; ;; *);; esac
+    log_debug force is $force
+
+
+    local provision=$(__get_node_config $node_index "node.provision")
+
+    if [[ $arch == "win" ]]; then
+        provision=$(to_unix_path $provision)
+    fi
+
+    if [[ ! -z $provision ]] && _check_node_exist $node_name; then
+        local marker=$(__get_node_metadata "$node_name" "provision")
+        log_debug "provision marker is $marker"
+        if [[ $marker == "done" ]];then
+            if [[ $force -eq 0 ]] && ! confirm "Pervisioned MYBOX Node \"$node_name\", are your sure you want to do it again"; then
+                return 1
+            fi
+        fi
+        local script="$provision"
+        if [[ $provision == "<<INLINE_SCRIPT" ]];then
+            _mybox_gen_provision_script
+            script="$_INLINE_PROVISION_SCRIPT_NAME"
+        fi
+        log_debug "provision script is $script"
+        if [[ -f $script ]]; then 
+            mybox_node_scp $node_name $script
+            echo "Provisioning MYBOX Node \"$node_name\" ... "
+            mybox_node_ssh $node_name "sh ~/$(basename $script)"
+            if [[ $? -eq 0 ]]; then
+                # tag it
+                __set_node_metadata $node_name "provision" "done"
+                # clean
+                if [[ -f $_INLINE_PROVISION_SCRIPT_NAME ]];then
+                    rm $_INLINE_PROVISION_SCRIPT_NAME
+                fi
+                # say success
+                echo "Provision MYBOX Node \"$node_name\" done successfully!"
+            fi
+        else
+            echo "provision script : $script not found!"
+        fi
+    else
+        echo "No provision task found. passed-by."
+    fi
+}
+
+function _mybox_gen_provision_script(){
+    echo "uname -a" > "$_INLINE_PROVISION_SCRIPT_NAME"
 }
 #----------------------------------
 # FUNCTION mybox_node_ssh 
 #----------------------------------
 function mybox_node_ssh(){
-    if [[ -z "$1" ]] || [[ $# -gt 1 ]]; then help_$FUNCNAME; fi;
+    if [[ -z "$1" ]]; then help_$FUNCNAME; fi;
     local node_name="$1" 
     if ! _check_node_exist $node_name; then
         echo "MYBOX Node \"$node_name\" not found!"
@@ -1984,7 +2054,8 @@ function mybox_node_ssh(){
                 local port=$(__get_new_usable_port_for_mybox)
                 mybox_vbox_ssh-setup "${vm_id}" -a "$port"
             fi
-            mybox_vbox_ssh "$vm_id"
+            shift
+            mybox_vbox_ssh "$vm_id" "$@"
             return $?
         else
             log_warn "MYBOX Node \"$node_name\" with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import."
@@ -2004,6 +2075,35 @@ __get_new_usable_port_for_mybox(){
     echo "$port"
 
 }
+
+#==================================
+# FUNCTION mybox_node_scp
+#==================================
+function mybox_node_scp(){
+    log_debug $FUNCNAME $@
+    local node_name="$1"
+    if ! _check_node_exist $node_name; then
+        echo "MYBOX Node \"$node_name\" not found!"
+        return 1
+    fi
+    let count=0
+    while [[ $count -lt 3 ]]; do
+        log_debug $FUNCNAME : excute mybox_node_ssh "$1" "echo 31415926"
+        local pi=$(mybox_node_ssh "$1" "echo 31415926" |grep ^31415926)
+        if [[ pi -eq 31415926 ]]; then
+            log_debug "ssh connection to VM \"$1\" tested ok"
+            local vm_id=$(_get_vmid_from_myboxfolder $node_name)
+            shift
+            mybox_vbox_scp $vm_id "$@"
+            return $?
+        else
+            log_debug "ssh connection failed $count."
+            let count=count+1
+        fi
+    done
+
+}
+
 #----------------------------------
 # FUNCTION mybox_node_info 
 #----------------------------------
@@ -2373,6 +2473,7 @@ function mybox_vbox_ssh(){
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" 2>/dev/null
     else
         if [ -e "$2" ];then
+            log_debug ssh $2
             ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" < "$2" 2>/dev/null
         else
             shift
@@ -2388,6 +2489,28 @@ function mybox_vbox_ssh(){
     # or delete the line in ~/.ssh/known_hosts by 
     # linenumber=$(cat ~/.ssh/known_hosts |grep -n 127.0.0.1]:$port|awk -F':' '{print $1}')
     # sed -i $line_numberd .ssh/known_hosts
+}
+
+function mybox_vbox_scp(){
+    
+    log_debug $FUNCNAME : $@
+    
+    local vm=$1
+    local file=$2
+    local target=$3
+
+    local port=$(_get_mybox_guestssh_fowarding_port $vm)
+
+    if [[ ! -e $file ]];then
+        return 1
+    fi
+
+    if [[ -z $target ]];then
+        target=/home/mybox
+    fi
+
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox -P "$port" "$file" mybox@127.0.0.1:"$target" 2>/dev/null
+
 }
 
 #----------------------------------
