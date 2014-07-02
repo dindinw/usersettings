@@ -1441,8 +1441,12 @@ function mybox_up(){
             fi
         done
 
+        #do provision
+        mybox_node_provision $node_index -q
+
         #start vm
         mybox_node_start "$node_name"
+
     done
 }
 
@@ -1524,7 +1528,7 @@ function mybox_clean(){
 #==================================
 function mybox_provision(){
     _check_status
-    case $1 in -f|--force) ;; *) help_$FUNCNAME; return 1; ;; esac;
+    case $1 in ""|-f|--force|-q|--quiet) ;; *) help_$FUNCNAME; return 1; ;; esac;
     echo
     echo Provision MYBOX environment by using \"${BOXCONF}\" ...
     for node_index in $(__get_node_index_list "$BOXCONF") ; do
@@ -1990,13 +1994,15 @@ function mybox_node_provision(){
     fi
 
     local force=0
-    case $2 in "") ;; -f|--force) force=1; ;; *) help_$FUNCNAME; return 1; ;; esac
+    local quiet=0
+
+    case $2 in "") ;; -f|--force) force=1; ;; -q|--quiet) quiet=1; ;; *) help_$FUNCNAME; return 1; ;; esac
 
     local node_name=$(__get_node_config $node_index "node.name")
     if [[ -z $node_name ]]; then node_name="node$node_index"; fi;
 
 
-    log_debug force is $force
+    log_debug force is $force, quiet is $quiet
 
 
     local provision=$(__get_node_config $node_index "node.provision")
@@ -2012,8 +2018,10 @@ function mybox_node_provision(){
         local marker=$(__get_node_metadata "$node_name" "provision")
         log_debug "provision marker is $marker"
         if [[ $marker == "done" ]];then
-            if [[ $force -eq 0 ]] && ! confirm "Pervisioned MYBOX Node \"$node_name\", are your sure you want to do it again"; then
-                return 1
+            if [[ $force -eq 0 ]]; then
+                if [[ $quiet -eq 1 ]] || ! confirm "Pervisioned MYBOX Node \"$node_name\", are your sure you want to do it again"; then
+                    return 1
+                fi
             fi
         fi
         local script="$provision"
@@ -2073,7 +2081,7 @@ function mybox_node_ssh(){
             else
                 # get a new port
                 local port=$(__get_new_usable_port_for_mybox)
-                mybox_vbox_ssh-setup "${vm_id}" -a "$port"
+                mybox_vbox_ssh-setup "${vm_id}" -a "$port" -f
             fi
             shift
             mybox_vbox_ssh "$vm_id" "$@"
@@ -2271,7 +2279,7 @@ function mybox_vbox_start(){
         return 1; 
     fi
     if _check_vm_running "$vm_name"; then
-        echo "VBox VM \"$vm_name\" is already started!"
+        log_debug "VBox VM \"$vm_name\" is already started!"
         return 1;
     fi
     vbox_start_vm ${vm_name} "headless"
