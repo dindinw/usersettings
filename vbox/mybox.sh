@@ -1582,6 +1582,7 @@ function _mybox_status(){
     local node="$1"
     local box=$(__get_node_metadata "$node" "box")
     local provider=$(__get_node_metadata "$node" "provider")
+    local provision=$(__get_node_metadata "$node" "provision")
     echo
                                                                                        echo "NODE NAME: $node"
                                                                                        echo "    MYBOX: $box"
@@ -1590,6 +1591,7 @@ function _mybox_status(){
     cat _tmp_${node}_info |grep ^ostype=      |sed -e "s/.*=//" -e "s/\"//g" -e "s/^/ GUEST OS: /"
     cat _tmp_${node}_info |grep ^name=        |sed -e "s/.*=//" -e "s/\"//g" -e "s/^/  VM NAME: /"
     cat _tmp_${node}_info |grep ^VMState=     |sed -e "s/.*=//" -e "s/\"//g" -e "s/^/ VM STATE: /"
+                                                                                       echo "PROVISION: $provision"
     rm  _tmp_${node}_info
 }
 
@@ -2036,9 +2038,15 @@ function mybox_node_provision(){
             script="$_INLINE_PROVISION_SCRIPT_NAME"
         fi
         log_debug "provision script is $script"
-        if [[ -f $script ]]; then 
+        if [[ -f $script ]]; then
+            echo "Preparing provision MYBOX Node \"$node_name\" ... " 
             mybox_node_scp $node_name $script
-            echo "Provisioning MYBOX Node \"$node_name\" ... "
+            if [[ ! $? -eq 0 ]];then
+                log_err "Failed to send provison script \"$script\" to node."
+                __set_node_metadata $node_name "provision" "failed"
+                return 1
+            fi
+            echo "Do the provision of MYBOX Node \"$node_name\" ... "
             mybox_node_ssh $node_name "sh ~/$(basename $script)"
             if [[ $? -eq 0 ]]; then
                 # tag it
@@ -2049,6 +2057,9 @@ function mybox_node_provision(){
                 fi
                 # say success
                 echo "Provision MYBOX Node \"$node_name\" done successfully!"
+            else
+                log_err "Failed when executing provison script \"$script\" under Node \"$node_name\"."
+                __set_node_metadata $node_name "provision" "failed"
             fi
         else
             echo "provision script : $script not found!"
@@ -2516,7 +2527,7 @@ function mybox_vbox_ssh(){
             log_debug input is $@
             echo -n "$@" > debug.sh
             ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" < debug.sh 2>/dev/null
-            if [ ! $? -eq 0 ]; then exit 1; fi; #exit directly if error
+            if [ ! $? -eq 0 ]; then return 1; fi; #exit directly if error
         fi
 
     fi
