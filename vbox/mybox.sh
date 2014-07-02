@@ -535,7 +535,7 @@ function help_mybox_config(){
 # FUNCTION help_mybox_up 
 #==================================
 function help_mybox_up(){
-    echo "Usage: $me up"
+    echo "Usage: $me up                        start up the whole MYBOX environment"
     echo "    -h, --help                       Print this help"
 }
 
@@ -543,31 +543,38 @@ function help_mybox_up(){
 # FUNCTION help_mybox_down 
 #==================================
 function help_mybox_down(){
-    _print_not_support $FUNCNAME $@
+    echo "Usage: $me down                      shutdown the whole MYBOX environment"
+    echo "    -h, --help                       Print this help"
 }
 #==================================
 # FUNCTION help_mybox_clean 
 #==================================
 function help_mybox_clean(){
-    _print_not_support $FUNCNAME $@
+    echo "Usage: $me clean                     destory the whole MYBOX environment, all nodes will be deleted!"
+    echo "    -f, --force                      force to destory"
+    echo "    -h, --help                       Print this help"
 }
 #==================================
 # FUNCTION help_mybox_provision 
 #==================================
 function help_mybox_provision(){
-    _print_not_support $FUNCNAME $@
+    echo "Usage: $me provision                 do the provision of the whole MYBOX environment."
+    echo "    -f, --force                      force to do provision"
+    echo "    -h, --help                       Print this help"
 }
 #==================================
 # FUNCTION help_mybox_ssh 
 #==================================
 function help_mybox_ssh(){
-    _print_not_support $FUNCNAME $@
+    echo "Usage: $me ssh <node_name>           SSH to a MYBOX node."
+    echo "    -h, --help                       Print this help"
 }
 #==================================
 # FUNCTION help_mybox_status 
 #==================================
 function help_mybox_status(){
-    _print_not_support $FUNCNAME $@
+    echo "Usage: $me status                    show status of the MYBOX environment."
+    echo "    -h, --help                       Print this help"
 }
 #==================================
 # FUNCTION help_mybox_box 
@@ -722,7 +729,10 @@ function help_mybox_node_remove(){
 # FUNCTION help_mybox_node_provision 
 #----------------------------------
 function help_mybox_node_provision(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"node provision\" : provision a MYBOX node by the node's index"
+    echo "Usage: $me node provision <node-index>"
+    echo "    -f, --force                       force to do the provision" 
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_node_ssh 
@@ -1120,7 +1130,7 @@ EOF
 [node 3 ]
     box.name=CentOS65-64
     node.provision=<<INLINE_SCRIPT
-        echo "exected provision script in $(uname -a)"
+        echo "exected provision script in $(hostname)"
     INLINE_SCRIPT
 [node 4 ]
     box.name=Precise64
@@ -1513,15 +1523,12 @@ function mybox_clean(){
 # FUNCTION mybox_provision 
 #==================================
 function mybox_provision(){
-_check_status
+    _check_status
+    case $1 in -f|--force) ;; *) help_$FUNCNAME; return 1; ;; esac;
     echo
     echo Provision MYBOX environment by using \"${BOXCONF}\" ...
     for node_index in $(__get_node_index_list "$BOXCONF") ; do
-        local node_name=$(__get_node_config $node_index "node.name")
-        if [[ -z $node_name ]]; then node_name="node$node_index"; fi;
-        echo 
-        echo "Try to provision MYBOX Node [ $node_index ] : $node_name ..."
-        mybox_node_provision $node_name $node_index $1
+        mybox_node_provision $node_index $1
     done
 
 }
@@ -1977,10 +1984,18 @@ readonly _INLINE_PROVISION_SCRIPT_NAME="mybox_inline_provision_script.sh"
 function mybox_node_provision(){
     log_debug $FUNCNAME $@
 
-    local node_name="$1"
-    local node_index="$2"
+    local node_index="$1"
+    if [[ -z $node_index ]] || ! is_number $node_index; then
+        help_$FUNCNAME; return 1;
+    fi
+
     local force=0
-    case $3 in -f|--force) force=1; ;; *);; esac
+    case $2 in "") ;; -f|--force) force=1; ;; *) help_$FUNCNAME; return 1; ;; esac
+
+    local node_name=$(__get_node_config $node_index "node.name")
+    if [[ -z $node_name ]]; then node_name="node$node_index"; fi;
+
+
     log_debug force is $force
 
 
@@ -1989,6 +2004,9 @@ function mybox_node_provision(){
     if [[ $arch == "win" ]]; then
         provision=$(to_unix_path $provision)
     fi
+
+    echo 
+    echo "Try to provision MYBOX Node [ $node_index ] : $node_name ..."
 
     if [[ ! -z $provision ]] && _check_node_exist $node_name; then
         local marker=$(__get_node_metadata "$node_name" "provision")
@@ -2000,7 +2018,7 @@ function mybox_node_provision(){
         fi
         local script="$provision"
         if [[ $provision == "<<INLINE_SCRIPT" ]];then
-            _mybox_gen_provision_script
+            _mybox_gen_provision_script $node_index
             script="$_INLINE_PROVISION_SCRIPT_NAME"
         fi
         log_debug "provision script is $script"
@@ -2013,7 +2031,7 @@ function mybox_node_provision(){
                 __set_node_metadata $node_name "provision" "done"
                 # clean
                 if [[ -f $_INLINE_PROVISION_SCRIPT_NAME ]];then
-                    rm $_INLINE_PROVISION_SCRIPT_NAME
+                   rm $_INLINE_PROVISION_SCRIPT_NAME
                 fi
                 # say success
                 echo "Provision MYBOX Node \"$node_name\" done successfully!"
@@ -2027,7 +2045,10 @@ function mybox_node_provision(){
 }
 
 function _mybox_gen_provision_script(){
-    echo "uname -a" > "$_INLINE_PROVISION_SCRIPT_NAME"
+    local node_index="$1"
+    sed -n -e "/^\[\s*node\s*$node_index\s*\]/,/^\s*INLINE_SCRIPT/ {/.*/p}" < "$BOXCONF" | \
+        sed -n -e "/.*<<INLINE_SCRIPT/,/^\s*INLINE_SCRIPT/ {/.*/p}" | \
+        sed -e "/INLINE_SCRIPT/d" > "$_INLINE_PROVISION_SCRIPT_NAME"
 }
 #----------------------------------
 # FUNCTION mybox_node_ssh 
