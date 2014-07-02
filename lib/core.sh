@@ -214,7 +214,12 @@ function to_unix_path(){
     if [ -z "$1" ]; then
         echo "$@"
     else
-        echo "/$1" | sed 's/\\/\//g' | sed 's/://' | sed 's/\/\//\//g'
+        echo $1|grep ":" > /dev/null
+        if [[ $? -eq 0 ]]; then
+            echo "/$1" | sed 's/\\/\//g' | sed 's/://' | sed 's/\/\//\//g'
+        else
+            echo "$@"
+        fi
     fi
 }
 
