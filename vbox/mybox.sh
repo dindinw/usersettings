@@ -1092,6 +1092,9 @@ cat <<EOF > "$BOXCONF"
     vbox.modify.memory=512
 # node
 [node 1 ]
+    node.provision=<<INLINE_SCRIPT
+        echo "exected provision script in $(hostname)"
+    INLINE_SCRIPT
 
 EOF
             ;;
@@ -1470,13 +1473,13 @@ readonly VBOX_MODIFYVM_KEYS="memory nictype1 nictype2 nictype3 nictype4"
 function __get_modify_items(){
     local node_index="$1"
     for base in $(mybox_config -g box);do
-        echo $base|grep "^vbox.modify." > dev/null
+        echo $base|grep "^vbox.modify." > /dev/null
         if [[ $? -eq 0 ]]; then
             eval $(echo $base|sed "s/vbox.modify.//")
         fi
     done
     for item in $(mybox_config -g node $node_index);do
-        echo $item|grep "^vbox.modify." > dev/null
+        echo $item|grep "^vbox.modify." > /dev/null
         if [[ $? -eq 0 ]]; then
            eval $(echo $item|sed "s/vbox.modify.//")
         fi
@@ -2762,6 +2765,10 @@ function _call_command()
             else
                 local cmd=$1
                 shift
+                if [[ ! $cmd == "init" ]];then
+                    # need to check if a vaild box environment for every box command except init.
+                    _check_status
+                fi
                 mybox_$cmd $@
                 return $?
             fi
@@ -2782,6 +2789,10 @@ function _call_command()
                         return $?
                     else
                         local cmd=$1_$2
+                        if [[ "$1" == "node" ]]; then
+                            # for every node commands also need to check MYBOX environment before execution.
+                            _check_status
+                        fi
                         shift
                         shift
                         log_debug call mybox_$cmd "$@"
