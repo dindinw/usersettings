@@ -258,14 +258,19 @@ function __get_box_metadata()
     local ovfname="${boxname}.ovf"
     
     #Vagrant box competible
-    listtar_win $boxfile |grep Vagrantfile > /dev/null
+    listtar $boxfile |grep Vagrantfile > /dev/null
     if [[ $? -eq 0 ]]; then
         #It's a Vagrant BOX
         log_debug "BOX : ${boxname} is a Vagrant box."
-        ovfname="box.ovf"
+        # awk format is like 
+        # 7z  -->  2013-10-25 00:47:53 .....        14181        14336  .\box.ovf
+        # tar -->  -rw------- pixline/staff     14181 2013-10-25 00:47 ./box.ovf
+        # in both outputh file name is $6
+        ovfname=$(listtar $boxfile |grep box.ovf |awk '{print $6}')
     fi
 
-    extract_win "${boxfile}" "${ovfname}" "${MYBOX_REPO}" > /dev/null
+    #extract_win "${boxfile}" "${ovfname}" "${MYBOX_REPO}" #> /dev/null
+    extracttar "${boxfile}" "${ovfname}" "${MYBOX_REPO}" 
 
     if [[ $? == 0 ]];then
         echo 
@@ -1724,7 +1729,9 @@ function _download_box(){
 
     if [[ $? -eq 0 ]] && [[ -f "./$boxname" ]]; then
         _copy_box_to_local_box_repo "./$boxname"
-        rm "./$boxname"
+        if [[ $? -eq 0 ]]; then
+            rm "./$boxname"
+        fi
     fi
 }
 
@@ -1735,7 +1742,7 @@ function _copy_box_to_local_box_repo(){
         return 1
     fi 
     #verfiy it first
-    local boxname=$(basename "$1")
+    local boxname=$(basename $(to_unix_path "$1"))
     local boxbase=${boxname%.*}
     local boxext=${boxname##*.}
     if [[ $(to_uppercase $boxext) == "BOX" ]]; then
@@ -1744,12 +1751,13 @@ function _copy_box_to_local_box_repo(){
     fi
     listtar_win "$1" |grep ".*ovf$" >/dev/null
     if [[ ! $? -eq 0 ]]; then
-        log_err "Not a valid MYBOX or Vagrant box."
+        log_err "Not a valid MYBOX or Vagrant box. \nPlease check the file \"$1\" manaually."
         return 1
     fi
     # do copy to mybox repo
     if [[ ! -f "$MYBOX_REPO/$boxname.box" ]]; then
         echo "Install $boxname to MYBOX local repository ..."
+        log_debug "$1" "$MYBOX_REPO/$boxname.box"
         cp "$1" "$MYBOX_REPO/$boxname.box"
     else
         log_err "\"$MYBOX_REPO/$boxname.box\" already exist."

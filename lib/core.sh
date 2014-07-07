@@ -180,6 +180,7 @@ function _7z_extract()
     local archive_name="$1"
     local extract_file_name="$2"
     local output_dir="$3"
+    echo 7z e $archive_name $extract_file_name -o$output_dir -y
     7z e $archive_name $extract_file_name -o$output_dir -y #2>&1>/dev/null
 }
 
@@ -199,6 +200,9 @@ function _7z_list()
 function listtar_win(){
     _7z_list "$1"
 }
+function listtar(){
+    tar -tvf $(to_unix_path "$1")
+}
 
 function tar_win(){
     local archive_name="$1"
@@ -212,11 +216,19 @@ function untar_win(){
     7z e $archive_name "*" -o$output_dir
 }
 
+function extracttar(){
+    local archive_name=$(to_unix_path "$1")
+    local extract_file_name=$(to_unix_path "$2") 
+    local output_dir=$(to_unix_path "$3")
+    log_debug tar xvf "$archive_name" -C "$output_dir" "$extract_file_name"
+    tar xvf "$archive_name" -C "$output_dir" "$extract_file_name" >/dev/null
+}
+
+
 function extract_win(){
     local archive_name=$(to_win_path "$1")
     local extract_file_name=$(to_win_path "$2")
     local output_dir=$(to_win_path "$3")
-    echo $archive_name $extract_file_name $output_dir
     _7z_extract $archive_name $extract_file_name $output_dir
 }
 
