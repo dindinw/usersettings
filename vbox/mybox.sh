@@ -1664,7 +1664,7 @@ function mybox_box(){
 function mybox_box_add(){
     while [[ ! -z "$1" ]];do
         case "$1" in
-            [hH][tT][tT][pP][sS]://*|[fF][tT][pP]://*|*://*)
+            *://*)
                 url="$1"
                 _download_box $url
                 return $?
@@ -1681,19 +1681,48 @@ function mybox_box_add(){
     help_$FUNCNAME
 }
 
+function _err_bad_url(){
+    log_err "Bad URL : $1"
+}
+
+function _verify_http(){
+    curl -s -k --head -L "$1" |grep "^HTTP/1.[01] 200" >/dev/null
+    return $?
+}
+function _verify_ftp(){
+    curl -s -k --head -L "$1" |grep "^Content-Length" >/dev/null
+    return $? 
+}
+
 function _download_box(){
     local boxname=$(basename $1)
     # verfiy url
-    curl -s -k --head -L "$1" |grep "^HTTP/1.[01] 200" >/dev/null
-    if [[ $? -eq 0 ]]; then
-        echo "Downloading $1 ..."
-        curl -k -o"./$boxname" -L "$1"
-    else
-        log_err "Bad URL : $1"
-        return 1
-    fi
+    
+    case "$1" in
+        http[s]://*|HTTP[S]://*)
+            _verify_http $1
+            if [[ ! $? -eq 0 ]]; then
+                _err_bad_url "$1"
+                return 1
+            fi
+            ;;
+        ftp://*|FTP://*)
+            _verify_ftp $1
+            if [[ ! $? -eq 0 ]]; then
+                _err_bad_url "$1"
+                return 1
+            fi
+            ;;
+        *)
+            _err_bad_url "$1"
+            return 1
+            ;;
+    esac
+
+    echo "Downloading $1 ..."
+    curl -k -o"./$boxname" -L "$1"
+
     if [[ $? -eq 0 ]] && [[ -f "./$boxname" ]]; then
-        echo "Install $boxname to MYBOX local repository ..."
         _copy_box_to_local_box_repo "./$boxname"
         rm "./$boxname"
     fi
@@ -1715,11 +1744,12 @@ function _copy_box_to_local_box_repo(){
     fi
     listtar_win "$1" |grep ".*ovf$" >/dev/null
     if [[ ! $? -eq 0 ]]; then
-        log_err "Not a vaild MYBOX or Vagrant box."
+        log_err "Not a valid MYBOX or Vagrant box."
         return 1
     fi
     # do copy to mybox repo
     if [[ ! -f "$MYBOX_REPO/$boxname.box" ]]; then
+        echo "Install $boxname to MYBOX local repository ..."
         cp "$1" "$MYBOX_REPO/$boxname.box"
     else
         log_err "\"$MYBOX_REPO/$boxname.box\" already exist."
