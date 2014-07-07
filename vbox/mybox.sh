@@ -525,7 +525,7 @@ function usage_internal()
     echo 
     help_mybox_vbox
     echo
-    help_mybox_vmware
+#    help_mybox_vmware
     echo 
     echo "!!! NOTE: Some Node/VM command is for internal test only. please use carefully "
     echo "    improperly usage may result a corrupted  MYBOX environment.          "
@@ -633,8 +633,8 @@ function help_mybox_box(){
     echo "    box remove        remove a box from user's local box repository"
     echo "    box pkgvbox       create a box from VirtualBox VM"
     echo "    box impvbox       import a box into VirtualBox VM"
-    echo "    box pkgvmware     create a box from VMWare VM"
-    echo "    box impvmware     import a box into VMWare VM"
+#    echo "    box pkgvmware     create a box from VMWare VM"
+#    echo "    box impvmware     import a box into VMWare VM"
 }
 #----------------------------------
 # FUNCTION help_mybox_box_add 
