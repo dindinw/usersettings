@@ -308,7 +308,12 @@ function _import_box_to_vbox_vm() {
 
     if [[ $is_vagrant -eq 1 ]]; then
         # try to migrate vagrent vm to mybox vm
-        mybox_vbox_ssh-setup "$vm_name" -a 2300
+        local port=$(__get_new_usable_port_for_mybox)
+        if [[ -z $port ]]; then
+            log_err "Can't get usable port for mybox."
+            return 1
+        fi
+        mybox_vbox_ssh-setup "$vm_name" -a ${port}
         mybox_vbox_migrate "$vm_name"
         vbox_wait_vm_shutdown "$vm_name"
         mybox_vbox_ssh-setup "$vm_name" -d
