@@ -71,13 +71,13 @@ function _err_box_folder_not_found(){
 ######################
 function _check_home()
 {
-    if [ -z "${MYBOX_HOME}" ] ; then
-        MYBOX_HOME="D:\Boxes"
-        log_warn "Environment variable \"MYBOX_HOME\" not set! using default path under \"${MYBOX_HOME}\""
+    if [ -z "${MYBOX_REPO}" ] ; then
+        MYBOX_REPO="D:\Boxes"
+        log_warn "Environment variable \"MYBOX_REPO\" not set! using default path under \"${MYBOX_REPO}\""
     fi
-    MYBOX_HOME=$(to_unix_path $MYBOX_HOME)
-    if [ ! -e "${MYBOX_HOME}" ]; then
-        echo "ERROR: MYBOX_HOME=\"${MYBOX_HOME}\" not exist, exit"
+    MYBOX_REPO=$(to_unix_path $MYBOX_REPO)
+    if [ ! -e "${MYBOX_REPO}" ]; then
+        echo "ERROR: MYBOX_REPO=\"${MYBOX_REPO}\" not exist, exit"
         exit
     fi
     if [ -z "${VBOX_HOME}" ] ; then
@@ -210,7 +210,7 @@ function _check_vm_running_by_id(){
 
 function _del_box(){
     local box=$(basename "$1" ".box")
-    pushd ${MYBOX_HOME} > /dev/null
+    pushd ${MYBOX_REPO} > /dev/null
         if [[ -e "${box}" ]];then
             rm -rf "${box}"
         fi
@@ -226,9 +226,9 @@ function _del_box(){
 
 function _get_all_box_names()
 {
-    find ${MYBOX_HOME} -maxdepth 1 -type f -name "*.box" -printf "%f\n"|sed s'/.box//'
+    find ${MYBOX_REPO} -maxdepth 1 -type f -name "*.box" -printf "%f\n"|sed s'/.box//'
 
-    #pushd ${MYBOX_HOME} > /dev/null
+    #pushd ${MYBOX_REPO} > /dev/null
     #for f in $(ls -m1 *.box); do basename $f .box; done;
     #local ret=$?
     #popd > /dev/null
@@ -253,7 +253,7 @@ function _get_box_detail(){
 function __get_box_metadata()
 {
     local boxname="$1"
-    local boxfile="${MYBOX_HOME}/${boxname}.box"
+    local boxfile="${MYBOX_REPO}/${boxname}.box"
 
     local ovfname="${boxname}.ovf"
     
@@ -265,17 +265,17 @@ function __get_box_metadata()
         ovfname="box.ovf"
     fi
 
-    extract_win "${boxfile}" "${ovfname}" "${MYBOX_HOME}" > /dev/null
+    extract_win "${boxfile}" "${ovfname}" "${MYBOX_REPO}" > /dev/null
 
     if [[ $? == 0 ]];then
         echo 
         echo "====================================================================="
         echo "BOX NAME: $boxname"
         echo "---------------------------------------------------------------------" 
-        cat "${MYBOX_HOME}/${ovfname}" |grep "vbox:Machine"
+        cat "${MYBOX_REPO}/${ovfname}" |grep "vbox:Machine"
     fi
 
-    rm "${MYBOX_HOME}/${ovfname}"
+    rm "${MYBOX_REPO}/${ovfname}"
 }
 
 ######################
@@ -286,7 +286,7 @@ function __get_box_metadata()
 function _import_box_to_vbox_vm() {
     log_debug $FUNCNAME $@
     local boxname="$1"
-    local boxfile="${MYBOX_HOME}/$boxname.box"
+    local boxfile="${MYBOX_REPO}/$boxname.box"
     local vm_name="$2"
     local ovfname="${boxname}.ovf"
     local is_vagrant=0
@@ -300,11 +300,11 @@ function _import_box_to_vbox_vm() {
         ovfname="box.ovf"
     fi
 
-    if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
-        mkdir -p "${MYBOX_HOME}/${boxname}"
-        untar_win "${boxfile}" "${MYBOX_HOME}/${boxname}" > /dev/null
+    if [[ ! -e "${MYBOX_REPO}/${boxname}" ]]; then
+        mkdir -p "${MYBOX_REPO}/${boxname}"
+        untar_win "${boxfile}" "${MYBOX_REPO}/${boxname}" > /dev/null
     fi
-    vbox_import_ovf "${MYBOX_HOME}/${boxname}/${ovfname}" "$vm_name"
+    vbox_import_ovf "${MYBOX_REPO}/${boxname}/${ovfname}" "$vm_name"
 
     if [[ $is_vagrant -eq 1 ]]; then
         # try to migrate vagrent vm to mybox vm
@@ -628,7 +628,9 @@ function help_mybox_box(){
 # FUNCTION help_mybox_box_add 
 #----------------------------------
 function help_mybox_box_add(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"box add\" : Add a MYBOX box into local box repository from an URL or a file location."
+    echo "Usage: $me box add <url>|<file_loc>"
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_box_list 
@@ -1660,7 +1662,68 @@ function mybox_box(){
 # FUNCTION mybox_box_add 
 #----------------------------------
 function mybox_box_add(){
-    _print_not_support $FUNCNAME $@
+    while [[ ! -z "$1" ]];do
+        case "$1" in
+            http://*|HTTP://*|FTP://*|ftp://*)
+                url="$1"
+                _download_box $url
+                return $?
+                shift
+                ;;
+            *)
+                file="$1"
+                _copy_box_to_local_box_repo $file
+                return $?
+                shift
+                ;;
+        esac
+    done
+    help_$FUNCNAME
+}
+
+function _download_box(){
+    local boxname=$(basename $1)
+    # verfiy url
+    curl -s --head -L "$1" |grep "^HTTP/1.[01] 200" >/dev/null
+    if [[ $? -eq 0 ]]; then
+        echo "Downloading $1 ..."
+        curl -o"./$boxname" -L "$1"
+    else
+        log_err "Bad URL : $1"
+        return 1
+    fi
+    if [[ $? -eq 0 ]] && [[ -f "./$boxname" ]]; then
+        echo "Install $boxname to MYBOX local repository ..."
+        _copy_box_to_local_box_repo "./$boxname"
+        rm "./$boxname"
+    fi
+}
+
+function _copy_box_to_local_box_repo(){
+    #check if file exist
+    if [[ ! -f "$1" ]]; then
+        _err_file_not_found "$1"
+        return 1
+    fi 
+    #verfiy it first
+    local boxname=$(basename "$1")
+    local boxbase=${boxname%.*}
+    local boxext=${boxname##*.}
+    if [[ $(to_uppercase $boxext) == "BOX" ]]; then
+        log_debug "$boxname is a standard box file."
+        boxname=$boxbase
+    fi
+    listtar_win "$1" |grep ".*ovf$" >/dev/null
+    if [[ ! $? -eq 0 ]]; then
+        log_err "Not a vaild MYBOX or Vagrant box."
+        return 1
+    fi
+    # do copy to mybox repo
+    if [[ ! -f "$MYBOX_REPO/$boxname.box" ]]; then
+        cp "$1" "$MYBOX_REPO/$boxname.box"
+    else
+        log_err "\"$MYBOX_REPO/$boxname.box\" already exist."
+    fi
 }
 #----------------------------------
 # FUNCTION mybox_box_list 
@@ -1721,7 +1784,7 @@ function mybox_box_remove(){
 function mybox_box_pkgvbox(){
     local vm_name="$1"
     local boxname="$(basename "$2" ".box")"
-    local box="${MYBOX_HOME}/${boxname}"
+    local box="${MYBOX_REPO}/${boxname}"
     
     if [ ! "$#" -eq 2 ] || [ -z "$vm_name" ] || [ -z "$box" ]; then 
         _err_unknown_opts $@
