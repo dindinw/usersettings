@@ -1664,12 +1664,12 @@ function mybox_box(){
 function mybox_box_add(){
     while [[ ! -z "$1" ]];do
         case "$1" in
-            http://*|HTTP://*|FTP://*|ftp://*)
+            [hH][tT][tT][pP][sS]://*|[fF][tT][pP]://*|*://*)
                 url="$1"
                 _download_box $url
                 return $?
                 shift
-                ;;
+                ;;                
             *)
                 file="$1"
                 _copy_box_to_local_box_repo $file
@@ -1684,10 +1684,10 @@ function mybox_box_add(){
 function _download_box(){
     local boxname=$(basename $1)
     # verfiy url
-    curl -s --head -L "$1" |grep "^HTTP/1.[01] 200" >/dev/null
+    curl -s -k --head -L "$1" |grep "^HTTP/1.[01] 200" >/dev/null
     if [[ $? -eq 0 ]]; then
         echo "Downloading $1 ..."
-        curl -o"./$boxname" -L "$1"
+        curl -k -o"./$boxname" -L "$1"
     else
         log_err "Bad URL : $1"
         return 1
