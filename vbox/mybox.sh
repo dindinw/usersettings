@@ -1085,10 +1085,10 @@ function mybox_init(){
 
     case "$template" in
         default)
-cat <<EOF > "$BOXCONF"
+cat <<"EOF" > "$BOXCONF"
 # MYBOX box config file
 [box] 
-    box.name=${box}
+    box.name=Trusty64
     vbox.modify.memory=512
 # node
 [node 1 ]
@@ -1099,10 +1099,10 @@ cat <<EOF > "$BOXCONF"
 EOF
             ;;
         test1)
-            cat <<EOF > "$BOXCONF"
+            cat <<"EOF" > "$BOXCONF"
 # MYBOX box config file
 [box] 
-    box.name=${box}
+    box.name=Trusty64
     vbox.modify.memory=512
 # node
 [node 1 ]
