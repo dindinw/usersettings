@@ -180,7 +180,7 @@ function _7z_extract()
     local archive_name="$1"
     local extract_file_name="$2"
     local output_dir="$3"
-    echo 7z e $archive_name $extract_file_name -o$output_dir -y
+    log_debug 7z e $archive_name $extract_file_name -o$output_dir -y
     7z e $archive_name $extract_file_name -o$output_dir -y #2>&1>/dev/null
 }
 
