@@ -258,10 +258,13 @@ function __get_box_metadata()
     local ovfname="${boxname}.ovf"
     
     #Vagrant box competible
-    listtar $boxfile |grep Vagrantfile > /dev/null
+    listtar_${arch} $boxfile |grep Vagrantfile > /dev/null
     if [[ $? -eq 0 ]]; then
+        local vagrant=1
         #It's a Vagrant BOX
         log_debug "BOX : ${boxname} is a Vagrant box."
+        # listtar using tar , not support file bigger than 2G
+        # listtar_win uing 7z. 
         # awk format is like 
         # 7z  -->  2013-10-25 00:47:53 .....        14181        14336  .\box.ovf
         # tar -->  -rw------- pixline/staff     14181 2013-10-25 00:47 ./box.ovf
@@ -269,8 +272,12 @@ function __get_box_metadata()
         ovfname=$(listtar $boxfile |grep box.ovf |awk '{print $6}')
     fi
 
-    #extract_win "${boxfile}" "${ovfname}" "${MYBOX_REPO}" #> /dev/null
-    extracttar "${boxfile}" "${ovfname}" "${MYBOX_REPO}" 
+    if [[ $vagrant -eq 1 ]]; then
+        extracttar "${boxfile}" "${ovfname}" "${MYBOX_REPO}" >/dev/null
+    else
+        extract_${arch} "${boxfile}" "${ovfname}" "${MYBOX_REPO}" > /dev/null
+    fi
+     
 
     if [[ $? == 0 ]];then
         echo 
