@@ -522,7 +522,7 @@ function usage_internal()
 
 function version()
 {
-    echo "$me 1.0.0"
+    echo "$me 1.1.0"
 }
 
 function _print_not_support(){
