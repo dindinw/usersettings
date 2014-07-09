@@ -2842,15 +2842,15 @@ function mybox_vbox_migrate(){
         return 1
     fi
     if ! _check_vm_running $vm_name; then
-        echo "VBOX VM \"${vm_name}\" neet to be started..."
+        log_info "VBOX VM \"${vm_name}\" neet to be started..."
         vbox_start_vm "$vm_name" "headless"
     fi
-    echo "Checking if \"$vm_name\" is a Vagrant VM ..."
+    log_info "Checking if \"$vm_name\" is a Vagrant VM ..."
     if _check_vagrant $vm_name; then
-        echo "Vagrent VM check OK, try to do migration ..."
+        log_info "Vagrent VM check OK, try to do migration ..."
         _migrate_to_mybox $vm_name
         if [[ $? -eq 0 ]]; then
-            echo "VBOX VM \"${vm_name}\" migrate to MYBOX VM OK!"
+            log_info "VBOX VM \"${vm_name}\" migrate to MYBOX VM OK!"
         fi
     fi
 }
