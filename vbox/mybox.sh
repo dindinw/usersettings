@@ -12,7 +12,6 @@ readonly DEFAULT_NODE="default_node"
 MYBOX_USABLE_PORT_RANGE="2251..2300"
 _VBOX_USED_PORT_LIST=""
 
-
 ######################
 # _ERR Functions
 ######################
@@ -38,7 +37,7 @@ function _err_box_not_found()
 
 function _err_node_not_found()
 {
-    log_err "MYBOX Node \"$1\" not found"
+    err_n "$1" "MYBOX Node not found"
 }
 
 function _err_vm_not_found(){
@@ -346,7 +345,7 @@ function _import_node_vbox(){
     fi
 
     if ! _check_box_exist ${boxname}; then
-        _err_box_not_found ${boxname}
+        echo_n "$node_name" "$(_err_box_not_found ${boxname})"
         return 1
     fi
     
@@ -359,7 +358,7 @@ function _import_node_vbox(){
         __set_node_metadata $node_name "provider" "vbox"
         __set_node_metadata $node_name "box" $box_name
         _set_vmid_to_myboxfolder $vm_name $node_name
-        echo "Import \"${boxname}\" to MYBOX Node \"$node_name\" under VBOX VM \"${vm_name}\" successfully!"
+        echo_n $node_name "Import \"${boxname}\" into VBOX VM \"${vm_name}\" successfully!"
     else
         log_err "Error : Import \"${boxname}\" into VBOX VM \"${vm_name}\" failed!"
         return 1
@@ -1471,7 +1470,7 @@ function mybox_up(){
     local base_box=$(__get_box_config "box.name")
     local base_provider=$(__get_box_config "box.provider")
 
-    echo "The base box name is $base_box , memory is $base_memory"
+    echo "The base box name is $base_box"
 
     for node_index in $(__get_node_index_list "$BOXCONF") ; do
         local node_name=$(__get_node_config $node_index "node.name")
@@ -1480,15 +1479,16 @@ function mybox_up(){
         if [[ -z $node_box ]]; then node_box="$base_box"; fi;
         #default provider is vbox
         if [[ -z $base_provider ]]; then base_provider="vbox"; fi;
-        echo 
-        echo "Try to start MYBOX Node [ $node_index ] : $node_name, box=$node_box, provider=$base_provider ..."
+        
+        echo
+        echo_n $node_name "Try to start MYBOX Node [ $node_index ] : $node_name, box=$node_box, provider=$base_provider ..."
         
         # check if the node exist
         if ! _check_node_exist $node_name; then
             #import vm
             mybox_node_import "$node_box" "$node_name" -p "$base_provider"
             if [[ ! $? -eq 0 ]];then
-                log_err "MYBOX import $node_box to $node_name under $base_provider failed."
+                echo_n $node_name "$(log_err "MYBOX import $node_box to $base_provider failed.")"
                 continue
             fi
         fi
@@ -1521,7 +1521,7 @@ function _check_node_need_modify(){
     if [[ "$current_value" == "$value" ]]; then
         return 1
     else
-        log_debug "$node_name's setting item $key $current_value -> $value, need to modify"
+        echo_n $node_name "Setting item $key $current_value -> $value, need to modify"
         return 0
     fi
 }
@@ -1570,6 +1570,7 @@ function __get_node_config() {
 function mybox_down(){
     if [[ "$1" == "-f" ]] || confirm "Are your sure to shutdown all the VMs in your MYBOX environment"; then
         for node in $(mybox_node_list); do
+            echo
             mybox_node_stop $node
         done
     fi
@@ -1578,6 +1579,7 @@ function mybox_down(){
 # FUNCTION mybox_clean 
 #==================================
 function mybox_clean(){
+    if [[ -z $(mybox_node_list) ]]; then return; fi;
     if [[ "$1" == "-f" ]] || confirm "Are your sure to remove all the VMs in your MYBOX environment"; then
         for node in $(mybox_node_list); do
             mybox_node_remove $node -f
@@ -1907,6 +1909,14 @@ function mybox_node(){
     _print_not_support $FUNCNAME $@
 }
 
+# the speical echo command for all node commands
+# the format like : [nodename] msgs
+function echo_n(){
+    local node_name="$1"
+    shift
+    log "[$node_name] " "$@"
+}
+
 #----------------------------------
 # FUNCTION mybox_node_list 
 #----------------------------------
@@ -1970,7 +1980,7 @@ function mybox_node_start(){
         if _check_node_exist "${node_name}" ; then
             _start_node $node_name
             if [[ $? -eq 0 ]]; then
-                echo "MYBOX Node \"$node_name\" started successfully!"
+                echo_n $node_name "MYBOX Node started successfully!"
                 return 0
             else
                 return $?
@@ -1989,10 +1999,10 @@ function _start_node(){
     local vm_id=$(_get_vmid_from_myboxfolder $node_name)
 
     if [[ ! -z "${vm_id}" ]]; then
-        echo "Start MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
+        echo_n $node_name "Start MYBOX Node with VBOX vm_id {$vm_id} ..."
         if _check_vm_exist_by_id $vm_id; then
             mybox_vbox_start ${vm_id}
-            if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" started OK!"; fi
+            if [ $? -eq 0 ]; then echo_n $node_name "MYBOX Node started OK!"; fi
             return $?
         else
             log_warn "MYBOX Node \"$node_name\" with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import."
@@ -2012,19 +2022,19 @@ function mybox_node_stop(){
     if [[ -z "$1" ]]; then help_$FUNCNAME; fi;
     local node_name="$1" 
     if ! _check_node_exist $node_name; then
-        _err_node_not_found ${node_name}
+        echo_n $node_name "$(_err_node_not_found ${node_name})"
         return 1
     fi
     local vm_id=$(_get_vmid_from_myboxfolder $node_name)
     
     if [[ ! -z "${vm_id}" ]]; then
-        echo "Stopping MYBOX Node \"$node_name\" with VBOX vm_id {$vm_id} ..."
+        echo_n $node_name  "Stopping MYBOX Node ..."
         if _check_vm_exist_by_id $vm_id; then
             mybox_vbox_stop ${vm_id}
-            if [ $? -eq 0 ]; then echo "MYBOX Node \"$node_name\" stopped OK!"; fi
+            if [ $? -eq 0 ]; then echo_n $node_name "MYBOX Node stopped OK!"; fi
             return $?
         else
-            log_warn "MYBOX Node \"$node_name\" with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import."
+            echo_n $node_name "$(log_warn "MYBOX Node with a obsoleted VBOX vm_id $vm_id, consider to remove it or re-import.")"
             return 1
         fi
     fi
@@ -2120,21 +2130,21 @@ function mybox_node_remove(){
     done
 
     if ! _check_node_exist $node_name; then
-        _err_node_not_found ${node_name}
+        echo_n $node_name "$(_err_node_not_found ${node_name})"
         return 1
     fi
     local vm_id=$(_get_vmid_from_myboxfolder $node_name)
 
     if [[ ! -z "${vm_id}" ]];then
         if [ $force -eq 1 ] || confirm "are your sure to remove MYBOX Node \"$node_name\""; then
-            echo "Removing MYBOX Node \"$node_name\" with $(to_uppercase $provider) VM \"{$vm_id}\" ..."
+            echo_n $node_name "Removing MYBOX Node ..."
             mybox_${provider}_remove "${vm_id}" --force
             if [[ ! $? -eq 0 ]]; then
-                log_warn "Error when try to removing Node \"$node_name\"'s backend $(to_uppercase $provider) VM \"{$vm_id}\""
+                echo_n $node_name "$(log_warn "Error when try to removing Node \"$node_name\"'s backend $(to_uppercase $provider) VM \"{$vm_id}\"")"
             else 
                 _remove_mybox_node_path ${node_name}
                 if [[ $? -eq 0 ]]; then
-                    echo "Removing MYBOX Node \"$node_name\" done!"
+                    echo_n $node_name "Removing MYBOX Node done!"
                 fi
             fi
         fi
@@ -2174,15 +2184,14 @@ function mybox_node_provision(){
         provision=$(to_unix_path $provision)
     fi
 
-    echo 
-    echo "Try to provision MYBOX Node [ $node_index ] : $node_name ..."
+    echo_n $node_name "Try to provision MYBOX Node ..."
 
     if [[ ! -z $provision ]] && _check_node_exist $node_name; then
         local marker=$(__get_node_metadata "$node_name" "provision")
         log_debug "provision marker is $marker"
         if [[ $marker == "done" ]];then
             if [[ $force -eq 0 ]]; then
-                echo "MYBOX Node \"$node_name\" has been provisioned already."
+                echo_n $node_name "MYBOX Node has been provisioned already."
                 if [[ $quiet -eq 1 ]] || ! confirm "Are your sure you want to do it again"; then
                     return 1
                 fi
@@ -2195,14 +2204,14 @@ function mybox_node_provision(){
         fi
         log_debug "provision script is $script"
         if [[ -f $script ]]; then
-            echo "Preparing provision MYBOX Node \"$node_name\" ... " 
+            echo_n $node_name "Preparing provision ... " 
             mybox_node_scp $node_name $script
             if [[ ! $? -eq 0 ]];then
                 log_err "Failed to send provison script \"$script\" to node."
                 __set_node_metadata $node_name "provision" "failed"
                 return 1
             fi
-            echo "Do the provision of MYBOX Node \"$node_name\" ... "
+            echo_n $node_name "Do the provision ... "
             mybox_node_ssh $node_name "sh ~/$(basename $script)"
             if [[ $? -eq 0 ]]; then
                 # tag it
@@ -2212,16 +2221,16 @@ function mybox_node_provision(){
                    rm $_INLINE_PROVISION_SCRIPT_NAME
                 fi
                 # say success
-                echo "Provision MYBOX Node \"$node_name\" done successfully!"
+                echo_n $node_name "Provision MYBOX Node done successfully!"
             else
                 log_err "Failed when executing provison script \"$script\" under Node \"$node_name\"."
                 __set_node_metadata $node_name "provision" "failed"
             fi
         else
-            echo "provision script : $script not found!"
+            echo_n $node_name "provision script : $script not found!"
         fi
     else
-        echo "No provision task found. passed-by."
+        echo_n $node_name "No provision task found. passed-by."
     fi
 }
 
@@ -2238,7 +2247,7 @@ function mybox_node_ssh(){
     if [[ -z "$1" ]]; then help_$FUNCNAME; fi;
     local node_name="$1" 
     if ! _check_node_exist $node_name; then
-        echo "MYBOX Node \"$node_name\" not found!"
+        _err_node_not_found $node_name
         return 1
     fi
     local vm_id=$(_get_vmid_from_myboxfolder $node_name)
@@ -2285,7 +2294,7 @@ function mybox_node_scp(){
     log_debug $FUNCNAME $@
     local node_name="$1"
     if ! _check_node_exist $node_name; then
-        echo "MYBOX Node \"$node_name\" not found!"
+        _err_node_not_found $node_name
         return 1
     fi
     let count=0
@@ -2452,7 +2461,7 @@ function mybox_vbox_start(){
         return 1; 
     fi
     if _check_vm_running "$vm_name"; then
-        log_debug "VBox VM \"$vm_name\" is already started!"
+        log_info "VBox VM \"$vm_name\" is already started!"
         return 1;
     fi
     vbox_start_vm ${vm_name} "headless"
@@ -2475,12 +2484,11 @@ function mybox_vbox_stop(){
     fi
 
     if _check_vm_running $vm_name; then
-        echo stop VBOX VM \"${vm_name}\" ...
+        log_info stop VBOX VM \"${vm_name}\" ...
         vbox_stop_vm "$vm_name"
         return $?
     else
-        echo VBOX VM \"${vm_name}\" not running.
-        return 1
+        log_info VBOX VM \"${vm_name}\" not running.
     fi  
 
 }
