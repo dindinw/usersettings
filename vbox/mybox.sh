@@ -91,6 +91,7 @@ function _check_home()
 }
 _check_home
 
+
 function _check_vbox_install_win()
 {
     VBoxManage --version >/dev/null 2>&1
@@ -104,14 +105,16 @@ function _check_vbox_install_win()
         VBoxManage --version >/dev/null 2>&1
         if ! [ $? -eq 0 ]; then
             log_err "VirtualBox environment set error."
-            return 1
+            exit 1
         fi
     else
         log_err "VirtualBox is not installed!"
-        return 1
+        exit 1
     fi
 }
-_check_vbox_install_$arch
+function _check_vbox_install_mac(){
+    test -f /usr/bin/VBoxManage || exit
+}
 
 function _check_extractor_install_win(){
     7z >/dev/null 2>&1
@@ -124,11 +127,39 @@ function _check_extractor_install_win(){
     7z >/dev/null 2>&1
     if ! [ $? -eq 0 ]; then
         log_err "7z not installed!"
-        return 1
+        exit 1
     fi
 }
-_check_extractor_install_$arch
 
+function _check_extractor_install_mac(){
+    test -f /usr/bin/tar || exit
+}
+
+function _check_install_win(){
+    _check_vbox_install_win
+    _check_extractor_install_win
+}
+
+function _check_install_mac(){
+    _check_vbox_install_mac
+    _check_extractor_install_mac
+    _check_gnused_install_mac
+}
+
+function _check_gnused_install_mac(){
+    if [[ -f /usr/local/bin/sed ]]; then
+        export PATH=/usr/local/bin:$PATH
+    else
+        log_err "GNU sed not intalled, please install it by execute command :"
+        log_err "\t brew install gnu-sed --default-names"
+        log_err "You may need to install Homebrew (http://brew.sh) first before you can use 'brew install'"
+        log_err "To install homebrew, try to execute command in terminal : "
+        log_err "\t" 'ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"'
+        log_err "See https://github.com/Homebrew/homebrew/wiki/Installation for more details"
+        exit 1
+    fi
+}
+_check_install_${arch}
 
 function _check_status(){
     _check_box_conf
