@@ -228,6 +228,13 @@ function untar_win(){
     7z e $archive_name "*" -o$output_dir
 }
 
+function untar_mac(){
+    local archive_name="$1"
+    local output_dir="$2"
+    log_debug "gtar xzf $archive_name -C $output_dir" 
+    gtar xvf "$archive_name" -C "$output_dir" 
+}
+
 function extracttar(){
     local archive_name=$(to_unix_path "$1")
     local extract_file_name=$(to_unix_path "$2") 

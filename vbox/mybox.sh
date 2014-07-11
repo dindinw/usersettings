@@ -37,7 +37,7 @@ function _err_box_not_found()
 
 function _err_node_not_found()
 {
-    err_n "$1" "MYBOX Node not found"
+    log_err "$1" "MYBOX Node not found"
 }
 
 function _err_vm_not_found(){
@@ -138,11 +138,16 @@ function _check_install_win(){
     _check_extractor_install_win
 }
 
+function _check_install_linux(){
+    _check_ssh_keys_permission
+}
+
 function _check_install_mac(){
     _check_vbox_install_mac
     _check_extractor_install_mac
     _check_gnused_install_mac
     _check_gnufind_install_mac
+    _check_ssh_keys_permission
 }
 
 function _check_extractor_install_mac(){
@@ -183,6 +188,21 @@ function __print_need_to_install_homebrew(){
     log_err "See https://github.com/Homebrew/homebrew/wiki/Installation for more details"
  
 }
+function _check_ssh_keys_permission(){
+    if [[ ! -f $MYBOX_HOME_DIR/keys/mybox ]]; then
+        log_err "The private key of MYBOX ($MYBOX_HOME_DIR/keys/mybox) not found."
+        exit 1
+    else
+        chmod 700 $MYBOX_HOME_DIR/keys/mybox
+    fi
+    if [[ ! -f $MYBOX_HOME_DIR/keys/mybox.pub ]]; then
+        log_err "The public key of MYBOX ($MYBOX_HOME_DIR/keys/mybox.pub) not found."
+        exit 1
+    else
+        chmod 700 $MYBOX_HOME_DIR/keys/mybox.pub
+    fi
+}
+
 _check_install_${arch}
 
 function _check_status(){
@@ -362,7 +382,7 @@ function _import_box_to_vbox_vm() {
     local is_vagrant=0
 
     #Vagrant box competible
-    listtar_win $boxfile |grep Vagrantfile > /dev/null
+    listtar_${arch} $boxfile |grep Vagrantfile > /dev/null
     if [[ $? -eq 0 ]]; then
         #It's a Vagrant BOX
         log_debug "BOX : ${boxname} is a Vagrant box."
@@ -372,7 +392,7 @@ function _import_box_to_vbox_vm() {
 
     if [[ ! -e "${MYBOX_REPO}/${boxname}" ]]; then
         mkdir -p "${MYBOX_REPO}/${boxname}"
-        untar_win "${boxfile}" "${MYBOX_REPO}/${boxname}" > /dev/null
+        untar_${arch} "${boxfile}" "${MYBOX_REPO}/${boxname}" > /dev/null
     fi
     vbox_import_ovf "${MYBOX_REPO}/${boxname}/${ovfname}" "$vm_name"
 
@@ -493,7 +513,7 @@ function _remove_mybox_node_path(){
 function _get_all_node_name(){
 
     if [[ -e "${BOXFOLDER}/nodes" ]]; then
-        for node_name in $(ls ${BOXFOLDER}/nodes/ -m1)
+        for node_name in $(ls ${BOXFOLDER}/nodes/ )
         do
             echo $node_name
         done
@@ -2246,8 +2266,12 @@ function mybox_node_provision(){
     fi
 
     echo_n $node_name "Try to provision MYBOX Node ..."
-
-    if [[ ! -z $provision ]] && _check_node_exist $node_name; then
+    if ! _check_node_exist $node_name; then
+        echo_n $node_name $(log_err "MYBOX Node \"$node_name\" not exist, the Node maybe not created or a corrupted MYBOX environment.")
+        echo_n $node_name $(log_err "Please execute 'mybox up' command to re-build your environment.")
+        return 1
+    fi
+    if [[ ! -z $provision ]]; then
         local marker=$(__get_node_metadata "$node_name" "provision")
         log_debug "provision marker is $marker"
         if [[ $marker == "done" ]];then
@@ -2921,6 +2945,10 @@ function _check_vagrant(){
     local KEY_PRV_VAGRANT="https://raw.githubusercontent.com/mitchellh/vagrant/master/keys/vagrant"
     if [[ ! -f $MYBOX_HOME_DIR/keys/vagrant ]]; then
         curl -s -o$MYBOX_HOME_DIR/keys/vagrant -L $KEY_PRV_VAGRANT
+    fi
+    # need to chmod for no-windown platform for vagrant key
+    if [[ ! "${arch}" == "win" ]]; then
+        chmod 700 $MYBOX_HOME_DIR/keys/vagrant
     fi
     local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
     if [[ -z $port ]]; then

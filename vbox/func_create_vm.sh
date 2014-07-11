@@ -344,7 +344,7 @@ function vbox_wait_vm_started() {
         sleep 1
         echo -n "."
         let count=count+1
-        if [ $count -gt $max_sec ]; then
+        if [[ $count -gt $max_sec ]]; then
             return 1
         fi
     done
@@ -404,6 +404,7 @@ function vbox_import_ovf(){
    
     if [[ -z "$3" ]]; then
         # the default, run directly and ignore output
+        log_debug "Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs"
         eval Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs > /dev/null
     elif [[ "$3" == "--confirm" ]]; then
         # if dry-run
