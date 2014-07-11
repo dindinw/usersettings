@@ -208,6 +208,12 @@ function listtar(){
     tar -tvf "$file"
 }
 
+function listtar_mac(){
+    local file=$(to_unix_path "$1")
+    log_debug tar -tvf "$file"
+    gtar -tvf "$file"
+}
+
 function tar_win(){
     local archive_name="$1"
     local file_names="$2"

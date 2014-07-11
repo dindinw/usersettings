@@ -131,9 +131,7 @@ function _check_extractor_install_win(){
     fi
 }
 
-function _check_extractor_install_mac(){
-    test -f /usr/bin/tar || exit
-}
+
 
 function _check_install_win(){
     _check_vbox_install_win
@@ -144,6 +142,18 @@ function _check_install_mac(){
     _check_vbox_install_mac
     _check_extractor_install_mac
     _check_gnused_install_mac
+    _check_gnufind_install_mac
+}
+
+function _check_extractor_install_mac(){
+    if [[ -f /usr/local/bin/gtar ]]; then
+        export PATH=/usr/local/bin:$PATH
+    else
+        log_err "GNU tar not intalled, please install it by execute command :"
+        log_err "\t brew install gnu-tar --default-names"
+        __print_need_to_install_homebrew
+       exit 1
+    fi
 }
 
 function _check_gnused_install_mac(){
@@ -152,12 +162,26 @@ function _check_gnused_install_mac(){
     else
         log_err "GNU sed not intalled, please install it by execute command :"
         log_err "\t brew install gnu-sed --default-names"
-        log_err "You may need to install Homebrew (http://brew.sh) first before you can use 'brew install'"
-        log_err "To install homebrew, try to execute command in terminal : "
-        log_err "\t" 'ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"'
-        log_err "See https://github.com/Homebrew/homebrew/wiki/Installation for more details"
-        exit 1
+        __print_need_to_install_homebrew
+       exit 1
     fi
+}
+function _check_gnufind_install_mac(){
+    if [[ -f /usr/local/bin/find ]]; then
+        export PATH=/usr/local/bin:$PATH
+    else
+        log_err "GNU find not intalled, please install it by execute command :"
+        log_err "\t brew install findutils --default-names"
+        __print_need_to_install_homebrew
+       exit 1
+    fi
+}
+function __print_need_to_install_homebrew(){
+    log_err "You may need to install Homebrew (http://brew.sh) first before you can use 'brew install'"
+    log_err "To install homebrew, try to execute command in terminal : "
+    log_err "\t" 'ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"'
+    log_err "See https://github.com/Homebrew/homebrew/wiki/Installation for more details"
+ 
 }
 _check_install_${arch}
 
@@ -288,6 +312,7 @@ function __get_box_metadata()
     local ovfname="${boxname}.ovf"
     
     #Vagrant box competible
+    log_debug "listtar_${arch} $boxfile |grep Vagrantfile"
     listtar_${arch} $boxfile |grep Vagrantfile > /dev/null
     if [[ $? -eq 0 ]]; then
         local vagrant=1
@@ -298,8 +323,11 @@ function __get_box_metadata()
         # awk format is like 
         # 7z  -->  2013-10-25 00:47:53 .....        14181        14336  .\box.ovf
         # tar -->  -rw------- pixline/staff     14181 2013-10-25 00:47 ./box.ovf
+        # in mac
+        # bsd-tar -->  -rw-------  0 501    20      14103 Sep 14  2012 box.ovf
+        # it's not correct, need th gnu tar!
         # in both outputh file name is $6
-        ovfname=$(listtar $boxfile |grep box.ovf |awk '{print $6}')
+        ovfname=$(listtar_${arch} $boxfile |grep box.ovf |awk '{print $6}')
     fi
 
     if [[ $vagrant -eq 1 ]]; then
@@ -1731,6 +1759,7 @@ function _err_bad_url(){
 }
 
 function _verify_http(){
+    log_debug "curl -s -k --head -L "$1" |grep "^HTTP/1.[01] 200""
     curl -s -k --head -L "$1" |grep "^HTTP/1.[01] 200" >/dev/null
     return $?
 }
@@ -1742,17 +1771,18 @@ function _verify_ftp(){
 function _download_box(){
     local boxname=$(basename $1)
     # verfiy url
+    local url=$(to_lowercase "$1")
     
-    case "$1" in
-        http[s]://*|HTTP[S]://*)
-            _verify_http $1
+    case "$url" in
+        http://*|https://*)
+            _verify_http $url
             if [[ ! $? -eq 0 ]]; then
                 _err_bad_url "$1"
                 return 1
             fi
             ;;
-        ftp://*|FTP://*)
-            _verify_ftp $1
+        ftp://*)
+            _verify_ftp $url
             if [[ ! $? -eq 0 ]]; then
                 _err_bad_url "$1"
                 return 1
@@ -1764,8 +1794,8 @@ function _download_box(){
             ;;
     esac
 
-    echo "Downloading $1 ..."
-    curl -k -o"./$boxname" -L "$1"
+    echo "Downloading $url ..."
+    curl -k -o"./$boxname" -L "$url"
 
     if [[ $? -eq 0 ]] && [[ -f "./$boxname" ]]; then
         _copy_box_to_local_box_repo "./$boxname"
@@ -1789,7 +1819,7 @@ function _copy_box_to_local_box_repo(){
         log_debug "$boxname is a standard box file."
         boxname=$boxbase
     fi
-    listtar_win "$1" |grep ".*ovf$" >/dev/null
+    listtar_${arch} "$1" |grep ".*ovf$" >/dev/null
     if [[ ! $? -eq 0 ]]; then
         log_err "Not a valid MYBOX or Vagrant box. \nPlease check the file \"$1\" manaually."
         return 1
