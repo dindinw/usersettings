@@ -71,20 +71,22 @@ function _err_box_folder_not_found(){
 function _check_home()
 {
     if [ -z "${MYBOX_REPO}" ] ; then
-        MYBOX_REPO="D:\Boxes"
+        MYBOX_REPO="${HOME}/Boxes"
         log_warn "Environment variable \"MYBOX_REPO\" not set! using default path under \"${MYBOX_REPO}\""
     fi
     MYBOX_REPO=$(to_unix_path $MYBOX_REPO)
     if [ ! -e "${MYBOX_REPO}" ]; then
-        echo "ERROR: MYBOX_REPO=\"${MYBOX_REPO}\" not exist, exit"
+        log_err "Environment variable \"MYBOX_REPO\"=\"${MYBOX_REPO}\", the folder not exist, exit"
         exit
+    else
+        export MYBOX_REPO="${MYBOX_REPO}"
     fi
-    if [ -z "${VBOX_HOME}" ] ; then
-        VBOX_HOME="${HOME}/VirtualBox VMs"
-        log_warn "Environment variable \"VBOX_HOME\" not set! using default path under \"${VBOX_HOME}\""
+    if [ -z "${VBOX_VM_HOME}" ] ; then
+        VBOX_VM_HOME="${HOME}/VirtualBox VMs"
+        log_warn "Environment variable \"VBOX_VM_HOME\" not set! using default path under \"${VBOX_VM_HOME}\""
     fi
-    if [ ! -e "${VBOX_HOME}" ]; then
-        echo "ERROR: VBOX_HOME=\"{VBOX_HOME}\" not exist, exit"
+    if [ ! -e "${VBOX_VM_HOME}" ]; then
+        log_err "Environment variable VBOX_VM_HOME=\"${VBOX_VM_HOME}\", the folder not exist, exit"
         exit
     fi
 

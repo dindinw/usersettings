@@ -277,7 +277,7 @@ function vbox_stop_vm(){
 function vbox_delete_vm(){
     local vm_name=$1
     log_info "Delete VBOX VM \"${vm_name}\" ..."
-    vboxmanage unregistervm "$vm_name" --delete
+    VBoxManage unregistervm "$vm_name" --delete
     local ret=$?
     if [[ $ret -eq 0 ]]; then
         log_info VM \"${vm_name}\" has been successfully deleted.
@@ -290,8 +290,8 @@ function vbox_show_vm_info()
     local vm_name="$1"
     shift
     local opts="$@"
-    log_debug "VBOX_CMD vboxmanage showvminfo $vm_name $opts"
-    eval vboxmanage showvminfo "$vm_name $opts"
+    log_debug "VBOX_CMD VBoxManage showvminfo $vm_name $opts"
+    eval VBoxManage showvminfo "$vm_name $opts"
 }
 
 function vbox_show_vm_info_machinereadable()
@@ -393,9 +393,9 @@ function vbox_import_ovf(){
     
     IFS=$'\n'
     local count=1
-    for disk in $(Vboxmanage import ${ovf_file} --dry-run 2>&1|grep "disk path"|awk -F "\"" '{print $2}'|sed s'/--vsys 0//'|sed s'/ path//')
+    for disk in $(VBoxManage import ${ovf_file} --dry-run 2>&1|grep "disk path"|awk -F "\"" '{print $2}'|sed s'/--vsys 0//'|sed s'/ path//')
     do 
-        opts="$opts $disk \"${VBOX_HOME}/$vm_name/disk$count.vmdk\""
+        opts="$opts $disk \"${VBOX_VM_HOME}/$vm_name/disk$count.vmdk\""
         let count=count+1
     done
     unset IFS
@@ -404,20 +404,20 @@ function vbox_import_ovf(){
    
     if [[ -z "$3" ]]; then
         # the default, run directly and ignore output
-        log_debug "Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs"
-        eval Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs > /dev/null
+        log_debug "VBoxManage import ${ovf_file} ${opts} --options keepnatmacs"
+        eval VBoxManage import ${ovf_file} ${opts} --options keepnatmacs > /dev/null
     elif [[ "$3" == "--confirm" ]]; then
         # if dry-run
-        eval Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs --dry-run
+        eval VBoxManage import ${ovf_file} ${opts} --options keepnatmacs --dry-run
         if confirm "are your sure to import "; then
-            eval Vboxmanage import ${ovf_file} ${opts} --options keepnatmacs
+            eval VBoxManage import ${ovf_file} ${opts} --options keepnatmacs
         fi
     fi
     return $?
 }
 
 function vbox_list_vm(){
-    Vboxmanage list vms
+    VBoxManage list vms
 }
 
 function vbox_list_running_vms(){
