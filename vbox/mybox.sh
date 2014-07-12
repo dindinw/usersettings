@@ -614,7 +614,7 @@ function usage_internal()
 
 function version()
 {
-    echo "$me 1.2.0"
+    echo "$me 1.2.1"
 }
 
 function _print_not_support(){
