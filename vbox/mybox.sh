@@ -2766,18 +2766,19 @@ function mybox_vbox_ssh(){
         return 1
     fi
 
+    # "-o", "LogLevel=quiet", // suppress "Warning: Permanently added '[localhost]:2022' (ECDSA) to the list of known hosts."
     if [ -z "$2" ];then
-        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" 2>/dev/null
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port"
     else
         if [ -e "$2" ];then
             log_debug ssh $2
-            ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" < "$2" 2>/dev/null
+            ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" < "$2"
         else
             shift
             log_warn "Execute remote call directly is dangerous, make sure the commands are included by ' ' "
             log_debug input is $@
             echo -n "$@" > debug.sh
-            ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" < debug.sh 2>/dev/null
+            ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -i $MYBOX_HOME_DIR/keys/mybox mybox@127.0.0.1 -p "$port" < debug.sh
             if [ ! $? -eq 0 ]; then return 1; fi; #exit directly if error
         fi
 
@@ -2957,7 +2958,7 @@ function _check_vagrant(){
         log_err "The VM guest ssh not setup. can not process"
         return 1
     fi 
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p $port "whoami" 2>/dev/null |grep ^vagrant$ 
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p $port "whoami" |grep ^vagrant$ 
 
     if [[ $? -eq 0 ]]; then
         return 0
@@ -2993,9 +2994,9 @@ chown -R mybox:mybox /home/mybox/.ssh
 chmod -R u=rwX,go= /home/mybox/.ssh
 EOF
     local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
-    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant -P "$port" ./$SCRIPT vagrant@127.0.0.1:~ 2>/dev/null
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -i $MYBOX_HOME_DIR/keys/vagrant -P "$port" ./$SCRIPT vagrant@127.0.0.1:~
     if [[ $? -eq 0 ]]; then rm ./$SCRIPT ; fi;
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p "$port" "sudo bash /home/vagrant/$SCRIPT; rm /home/vagrant/$SCRIPT; sudo shutdown -h now" 2>/dev/null
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p "$port" "sudo bash /home/vagrant/$SCRIPT; rm /home/vagrant/$SCRIPT; sudo shutdown -h now"
 }
 #----------------------------------
 # FUNCTION mybox_vbox_status
