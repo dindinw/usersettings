@@ -92,6 +92,7 @@ function requestByAmazon(changeNameJob,ASIN){
         if(rep.statusCode == 200){
             echo("------------------------------------------------------------")
             echo(reqBody.uri)
+            //echo(body)
             var $ = cheerio.load(body);
             var newName = [];
             var title="";
@@ -109,11 +110,12 @@ function requestByAmazon(changeNameJob,ASIN){
             var date
             var pubdate = $('#pubdate').val();
 
+            // get pubdate from buying dev
             if (pubdate === undefined) {
                 $('div[class=buying]').find('span[style="font-weight: bold;"]').each(function() {
-                    //echo("----------------")
+                    echo("----------------")
                     var text = $(this).text().trim();
-                    //echo(text);
+                    echo(text);
                     if (new RegExp(MONTH_REGXP).test(text)){
                         echo("Pub Date :",text);
                         pubdate = Date.parse(text);
@@ -127,6 +129,26 @@ function requestByAmazon(changeNameJob,ASIN){
                     }
                     
                 });
+            }
+            // try to get pubdate from detail-bullets div
+            if (pubdate === undefined) {
+                $('div[id=detail-bullets]').find('li').each(function() {
+                    //echo("in detail-bullets")
+                    var text= $(this).text().trim();
+                    //echo(text);
+                    if (new RegExp("Publisher:.*").test(text)){
+                        echo("Publisher:",text);
+                        text = text.replace(/.*\(/,"");
+                        text = text.replace(/\)/,"");
+                        text = text.trim();
+                        //echo(text)
+                        if (new RegExp(MONTH_REGXP).test(text)){
+                            echo("Pub Date :",text);
+                            pubdate = Date.parse(text);
+                        }
+                    }
+                });
+
             }
             if (pubdate !== undefined) {
                 date = new Date(pubdate);
