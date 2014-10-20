@@ -1,8 +1,12 @@
 . _test_vhd_common.sh
 
-#extractInstallWim "/d/ISO/windows/X17-59337.iso" "${HOME}/Downloads"
+#extract_installwim "/d/ISO/windows/X17-59337.iso" "${HOME}/Downloads"
 
 #extract_bootwim "/d/ISO/windows/X17-59337.iso" "${HOME}/Downloads"
+
+#extract_installwim "/d/ISO/Windows/Win7/X17-59337.iso" "${HOME}/Downloads"
+
+#extract_bootwim "/d/ISO/Windows/Win7/X17-59337.iso" "${HOME}/Downloads"
 
 vhd_detach "${HOME}/Downloads/test2.vhd"
 rm -f "${HOME}/Downloads/test2.vhd"

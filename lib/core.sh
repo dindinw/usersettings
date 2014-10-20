@@ -120,7 +120,7 @@ function ostype()
         # TODO 32/64
 
     else #WIN
-        OS="Win"
+        OS=$OS_WIN
         FILE_EXT=$FILE_EXT_WIN
         if [[ "$(echo cpu get addresswidth|wmic 2> /dev/null |awk '$1 ~/64/ {print $1}')" == "64" ]]; then
             # 64 bit
@@ -142,6 +142,11 @@ function ostype()
 }
 ostype
 clean_wmi_tmp_file
+
+if [[ "$OS" == "$OS_WIN" ]]; then
+    if [[ -z ${HOME} ]]; then HOME="${HOMEDRIVE}${HOMEPATH}"; fi
+    if [[ -z ${HOME} ]]; then HOME="${USERPROFILE}"; fi
+fi
 
 LIGHTGREEN="\[\033[1;32m\]"
 LIGHTRED="\[\033[1;31m\]"
