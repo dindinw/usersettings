@@ -275,6 +275,13 @@ function vbox_stop_vm(){
     VBoxManage controlvm ${vm_name} poweroff
 }
 
+function vbox_delete_vm(){
+    local vm_name=$1
+    echo "Delete VBOX VM \"${vm_name}\" ..."
+    vboxmanage unregistervm "$vm_name" --delete
+    return $?
+}
+
 
 # Usage:
 # VBoxManage modifyvm [--natpf<1-N> [<rulename>],tcp|udp,[<hostip>],<hostport>,[<guestip>],<guestport>]

@@ -1285,7 +1285,35 @@ function mybox_vbox_modify(){
 # FUNCTION mybox_vbox_remove 
 #----------------------------------
 function mybox_vbox_remove(){
-    _print_not_support $FUNCNAME $@
+    local vm_name="$1"
+    local force=0
+    if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;
+    else
+        vm_name="$1"
+    fi
+    if [[ ! -z "$2" ]]; then
+        if [[ "$2" == "-f" || "$2" == "--force" ]];then
+            force=1
+        else
+            help_$FUNCNAME;return 1;
+        fi
+    fi
+
+    if _check_vm_exist $vm_name; then
+        if _check_vm_running $vm_name; then
+            if [[ $force -eq 1 ]] || confirm "VirtualBox VM \"${vm_name}\" is running, do you want to stop and delete"; then
+                mybox_vbox_stop $vm_name
+            else
+                return 1
+            fi
+        fi
+        if [[ $force -eq 1 ]] || confirm "Are you sure to delete VirtualBox VM \"${vm_name}\""; then
+           vbox_delete_vm $vm_name
+        fi
+    else
+        _err_vm_not_found $vm_name
+    fi
+    
 }
 #----------------------------------
 # FUNCTION mybox_vbox_provision 
