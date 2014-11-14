@@ -38,10 +38,10 @@ function _log() {
     if [[ $1 -le $LOG_LEVEL ]]; then
         if [[ -z ${LOG_OUTPUT} ]] || [[ ${LOG_OUTPUT} == "STDOUT" ]];then
             shift
-            echo $LOG_STYLE $@ >&1 
+            echo -e $LOG_STYLE $@ >&1 
         else
             shift
-            echo $LOG_STYLE $@ > "${LOG_OUTPUT}"
+            echo -e $LOG_STYLE $@ > "${LOG_OUTPUT}"
         fi
     fi
 

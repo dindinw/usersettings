@@ -16,45 +16,48 @@ readonly DEFAULT_NODE="default_node"
 ######################
 function _err_unknown_opts()
 {
-    echo "Error : Uknown opts " $@
+    log_err "Uknown opts " $@
 }
 
 function _err_unknown_command()
 {
-    echo "Error : Uknown Command " $1
+    log_err "Uknown Command " $1
 }
 
 function _err_file_not_found()
 {
-    echo "Error : File \"$1\" not found" 
+    log_err "File \"$1\" not found" 
 }
 
 function _err_box_not_found()
 {
-    echo "Error : MYBOX box \"$1\" not found"
+    log_err "MYBOX Box \"$1\" not found"
+}
+
+function _err_node_not_found()
+{
+    log_err "MYBOX Node \"$1\" not found"
 }
 
 function _err_vm_not_found(){
-    echo "Error : VirtualBox VM \"$1\" not found"
+    log_err "VirtualBox VM \"$1\" not found"
 }
 
 function _err_vm_exist(){
-    echo "Errro : VirtualBox VM \"$1\" exist"
+    log_err "VirtualBox VM \"$1\" exist"
 }
 
 function _err_not_null(){
-    echo "Error : \"$1\" should not be null"
+    log_err "Parameter \"$1\" should not be null"
 }
 function _err_boxconf_exist_when_init(){
-    echo "Error : MYBOX configuration file \"$BOXCONF\" already exists in this directory."
-    echo "        Please remove it before running \"$me init\"."
+    log_err "MYBOX configuration file \"$BOXCONF\" already exists in this directory.\n Please remove it before running \"$me init\"."
 }
 function _err_boxconf_not_found(){
-    echo "Error : MYBOX configuration file \"$BOXCONF\" not found in $(pwd) ."
-    echo "        Please init your MYBOX environment by running \"$me init\"."
+    log_err "MYBOX configuration file \"$BOXCONF\" not found in $(pwd).\n Please init your MYBOX environment by running \"$me init\"."
 }
 function _err_box_folder_not_found(){
-    echo "Error : $BOXFOLDER is not found in this directory. need to redo \"$me init\"."
+    log_err "$BOXFOLDER is not found in this directory. need to redo \"$me init\"."
 }
 
 ######################
@@ -349,7 +352,7 @@ function _get_mybox_node_path(){
 
 function _get_all_node_name(){
 
-    if [[ -e $${BOXFOLDER}/nodes ]]; then
+    if [[ -e "${BOXFOLDER}/nodes" ]]; then
         for node_name in $(ls ${BOXFOLDER}/nodes/ -m1)
         do
             echo $node_name
@@ -1109,8 +1112,13 @@ function mybox_node_start(){
     log_debug $FUNCNAME $@
     if [[ ! -z "$1" ]]; then
         local node_name="$1"
-        _start_node $node_name
-        return $?
+        if _check_node_exist "${node_name}" ; then
+            _start_node $node_name
+            return $?
+        else
+            _err_node_not_found ${node_name}
+            return 1
+        fi
     fi
     help_$FUNCNAME
 }
