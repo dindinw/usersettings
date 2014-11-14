@@ -993,8 +993,11 @@ function mybox_box_pkgvbox(){
     echo create Box \"${box}.box\" from VM \"${vm_name}\" ...
 
     vbox_export_vm $vm_name "${box}/${boxname}"
-    tar_$arch "${box}.box" "${box}"
+    tar_$arch "${box}.box" "${box}" >/dev/null
     rm -rf "${box}"
+    if [[ $? -eq 0 ]]; then 
+        echo "Create Box \"${box}\" successfully!"
+    fi
 }
 
 #----------------------------------
