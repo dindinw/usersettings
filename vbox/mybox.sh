@@ -66,9 +66,7 @@ function _check_home()
         MYBOX_HOME="D:\Boxes"
         echo "WARNING: env \"MYBOX_HOME\" not set! using default path under \"${MYBOX_HOME}\""
     fi
-    echo $MYBOX_HOME
     MYBOX_HOME=$(to_unix_path $MYBOX_HOME)
-    echo $MYBOX_HOME
     if [ ! -e "${MYBOX_HOME}" ]; then
         echo "ERROR: MYBOX_HOME=\"${MYBOX_HOME}\" not exist, exit"
         exit
