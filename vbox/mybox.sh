@@ -83,6 +83,28 @@ function _check_home()
 }
 _check_home
 
+function _check_vbox_install_win()
+{
+    VBoxManage --version >/dev/null 2>&1
+    if [ $? -eq 0 ]; then return 0; fi;
+    #echo $(to_win_path "${VBOX_MSI_INSTALL_PATH}")
+    if [ -e "$(to_win_path "${VBOX_MSI_INSTALL_PATH}")" ]; then
+        VBoxManage --version >/dev/null 2>&1
+        if ! [ $? -eq 0 ]; then
+            export PATH=$PATH:"$(to_unix_path "${VBOX_MSI_INSTALL_PATH}")"
+        fi
+        VBoxManage --version >/dev/null 2>&1
+        if ! [ $? -eq 0 ]; then
+            log_err "VirtualBox environment set error."
+            return 1
+        fi
+    else
+        log_err "VirtualBox is not installed!"
+        return 1
+    fi
+}
+_check_vbox_install_$arch
+
 function _check_status(){
     _check_box_conf
     _check_box_folder
@@ -310,10 +332,13 @@ function _get_mybox_node_path(){
 
 function _get_all_node_name(){
 
-    for node_name in $(ls ${BOXFOLDER}/nodes/ -m1)
-    do
-        echo $node_name
-    done
+    if [[ -e $${BOXFOLDER}/nodes ]]; then
+        for node_name in $(ls ${BOXFOLDER}/nodes/ -m1)
+        do
+            echo $node_name
+        done
+    fi
+    echo
 }
 
 function _build_uni_vm_name(){
