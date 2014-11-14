@@ -166,7 +166,7 @@ function to_unix_path(){
     if [ -z "$1" ]; then
         echo "$@"
     else
-        echo "/$1" | sed 's/\\/\//g' | sed 's/://'
+        echo "/$1" | sed 's/\\/\//g' | sed 's/://' | sed 's/\/\//\//g'
     fi
 }
 
