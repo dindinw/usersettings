@@ -105,6 +105,23 @@ function _check_vbox_install_win()
 }
 _check_vbox_install_$arch
 
+function _check_extractor_install_win(){
+    7z >/dev/null 2>&1
+    if [ $? -eq 0 ]; then return 0 ; fi;
+    if [ -e "${PROGRAMW6432}/7-Zip" ]; then
+        export PATH=$PATH:"$(to_unix_path "${PROGRAMW6432}/7-Zip")"
+    elif [ -e "${PROGRAMFILES}/7-Zip" ];then 
+        export PATH=$PATH:"$(to_unix_path "${PROGRAMFILES}/7-Zip")"
+    fi
+    7z >/dev/null 2>&1
+    if ! [ $? -eq 0 ]; then
+        log_err "7z not installed!"
+        return 1
+    fi
+}
+_check_extractor_install_$arch
+
+
 function _check_status(){
     _check_box_conf
     _check_box_folder
