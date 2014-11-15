@@ -310,15 +310,19 @@ function vbox_show_vm_info_machinereadable()
 function vbox_guestssh_setup(){
     local vm_name="$1"
     local port="$2"
+    local rule_name="$3"
     if [[ -z "$port" ]]; then port=2222; fi;
+    if [[ -z "$rule_name" ]]; then rule_name="guestssh"; fi;
     echo Setup ssh service to VM \"${vm_name}\" ...
-    VBoxManage modifyvm ${vm_name} --natpf1 "guestssh,tcp,,${port},,22"
+    VBoxManage modifyvm ${vm_name} --natpf1 "${rule_name},tcp,,${port},,22"
 }
 
 function vbox_guestssh_remove(){
     local vm_name="$1"
+    local rule_name="$2"
+    if [[ -z "$rule_name" ]]; then rule_name="guestssh"; fi;
     echo Remove guest ssh service to VM \"${vm_name}\" ...
-    VBoxManage modifyvm "${vm_name}" --natpf1 delete "guestssh"
+    VBoxManage modifyvm "${vm_name}" --natpf1 delete "$rule_name"
 }
 
 function vbox_wait_vm_shutdown() {

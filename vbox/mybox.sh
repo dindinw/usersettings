@@ -1370,8 +1370,57 @@ function mybox_vbox_stop(){
 # FUNCTION mybox_vbox_modify 
 #----------------------------------
 function mybox_vbox_modify(){
-    _print_not_support $FUNCNAME $@
+    if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi
+    local vm_name="$1"
+    local force=0
+    shift
+    while [[ ! -z "$1" ]];do
+        case "$1" in
+            -f|--force)
+                shift
+                force=1
+                ;;
+            **)
+                shift
+                help_$FUNCNAME; return 1 ;
+                ;;
+        esac
+    done
+    if _check_vm_running $vm_name; then
+        if [[ $force -eq 1 ]] || confirm "VM \"$vm_name\" is running, need to stop before do mofify, continue to stop it"; then
+            vbox_stop_vm $vm_name
+        else
+            #cancle modify and exit
+            return 1
+        fi
+    fi
 }
+
+function _modify_vbox_guestssh(){
+    local $vm_name="$1"
+    if _check_vbox_guestssh_rule_exist $vm_name ; then
+        vbox_guestssh_remove $vm_name "mybox_gusetssh"
+    fi
+    vbox_guestssh_setup $vm_name $port "mybox_gusetssh"
+}
+
+function _check_vbox_guestssh_rule_exist(){
+    local $vm_name="$1"
+    mybox_vbox_info $vm_name -m|grep "mybox_gusetssh" > /dev/null
+    return $?
+}
+function _get_all_fowarding_rules(){
+    for vm_name in $(mybox_vbox_list -f uuid); do
+        mybox_vbox_info $vm_name -m | grep "Forwarding"
+    done
+}
+function _get_all_vbox_used_fowarding_ports(){
+    for vm_id in $(mybox_vbox_list -f name); do 
+        #Forwarding(0)="guestssh,tcp,,2222,,22"-->2222
+        mybox_vbox_info $vm_id -m |grep Forwarding|sed s'/.*=//'|sed s'/"//g'|awk -F',' '{print $4}'
+    done
+}
+
 #----------------------------------
 # FUNCTION mybox_vbox_remove 
 #----------------------------------
@@ -1415,7 +1464,7 @@ function mybox_vbox_provision(){
 # FUNCTION mybox_vbox_ssh 
 #----------------------------------
 function mybox_vbox_ssh(){
-    _print_not_support $FUNCNAME $@
+    ssh -i ~/vagrant.key.private vagrant@127.0.0.1 -p 2222
 }
 #----------------------------------
 # FUNCTION mybox_vbox_info 
