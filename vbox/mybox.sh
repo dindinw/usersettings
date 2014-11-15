@@ -684,7 +684,7 @@ function help_mybox_vbox(){
 function help_mybox_vbox_list(){
     echo "MYBOX subcommand \"vbox list\" : list all user's VirtualBox VMs in host machine."
     echo "Usage: $me vbox list [<opts>]"
-    echo "    -n|--nameonly                    list result only show vm's name."
+    echo "    -f|--format <name|uuid>          format list result only show VM's name or VM id"
     echo "    -r|--running                     list all running VirtualBox VMs."
     echo "    -os|--ostype <ubuntu|redhat|     list VMs by os type."
     echo "                  windows>                               "
@@ -1231,14 +1231,23 @@ function mybox_vbox(){
 # FUNCTION mybox_vbox_list 
 #----------------------------------
 function mybox_vbox_list(){
-    local name=0
+    local format=""
     local running=0
     local os=""
     while [[ ! -z "$1" ]];do
         case "$1" in
-        -n|--nameonly)
-            name=1
+        -f|--format)
             shift
+            format="$1"
+            case "$format" in
+                name|uuid)
+                    shift
+                    ;;
+                *)
+                    _err_unknown_opts "--foramt $format"
+                    help_$FUNCNAME;return 1
+                    ;; 
+            esac
             ;;
         -r|--running)
             running=1
@@ -1264,39 +1273,52 @@ function mybox_vbox_list(){
         esac
     done
 
+    # raw result will save to the temp file
     local vm_list="./_tmp_mybox_vbox_vm_list"
 
+    # first get raw result from vbox, "vm_name" {vm_uuid}
     if [ $running -eq 1 ]; then
         vbox_list_running_vms > $vm_list
     else
         vbox_list_vm > $vm_list
     fi
-    if ! [ -z $os ];then
-        log_trace "The selected ostype is \"$os\""
-        # need to filter the os type of vm
-        cat $vm_list|while read line; do
-            log_trace "line read : $line"
-            local vm_name=$(echo $line|awk '{print $1}'|sed s'/"//g')
-            log_trace "Checking the ostype for VM \"$vm_name\""
+    if [[ -z $format ]]; then
+        echo "VBOX_VM_ID                            STATE     VBOX_VM_NAME                                                "
+        echo "------------------------------------  --------  ------------------------------------------------------------" 
+    fi
+    #for evey line in raw result
+    cat $vm_list|while read line; do
+   
+        log_trace "line read : $line"
+        local vm_name=$(echo $line|awk '{print $1}'|sed s'/"//g')
+        local vm_id=$(echo $line|awk '{print $2}'|sed s'/{//'|sed s'/}//')
+        local filter_out=0    
+        # if need to fiter the line
+        if ! [ -z $os ];then
+            filter_out=1
+            log_trace "The selected ostype is \"$os\""
+            log_trace "Checking the ostype for VM \"$vm_name\" uuid \"$vm_id\""
             local ostype=$(mybox_vbox_info $vm_name -m|grep ostype|sed s'/ostype=//')
             log_trace "-----------> ostype $ostype"
             local ostype_s=$(to_lowercase $(echo $ostype|sed s'/"//g'))
             log_trace "-----------> ostype $ostype_s"
             if [[ $ostype_s == $os ]]; then
-                if [[ $name -eq 1 ]]; then
-                    echo $vm_name
-                else
-                    echo $line
-                fi
+                #reformat output
+                filter_out=0
             fi
-        done
-    else
-        if [[ $name -eq 1 ]]; then
-            cat $vm_list|awk '{print $1}'|sed s'/"//g'
-        else
-            cat $vm_list
         fi
-    fi
+        # if can print out
+        if [[ $filter_out -eq 0 ]];then 
+            if [[ $format == "name" ]]; then
+                echo $vm_name
+            elif [[ $format == "uuid" ]];then
+                echo $vm_id
+            else
+                local vm_status=$(mybox_vbox_status "${vm_id}")
+                printf "%-36s  %-8s  %s \n" $vm_id $vm_status $vm_name
+            fi
+        fi
+    done
     rm $vm_list
 }
 #----------------------------------
