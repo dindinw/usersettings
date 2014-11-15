@@ -385,7 +385,7 @@ readonly COMMANDS=(
     "myboxsub:box node vbox vmware"
     "box:add list detail remove pkgvbox impvbox pkgvmware impvmware"
     "node:list import start stop modify remove provision ssh info"
-    "vbox:list start stop modify remove provision ssh info"
+    "vbox:list start stop modify remove provision ssh info status"
     "vmware:list start stop modify remove provision ssh info"
     )
 
@@ -731,8 +731,20 @@ function help_mybox_vbox_ssh(){
 # FUNCTION help_mybox_vbox_info 
 #----------------------------------
 function help_mybox_vbox_info(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"vbox info\" : Show the detail information of a VirtualBox VM in host machine."
+    echo "Usage: $me vbox info <vm_name>|<vm_id>"
+    echo "    -m, --machinereadable            Show machine-friendly output in the standard propreties format"
+    echo "    -h, --help                       Print this help"
 }
+#----------------------------------
+# FUNCTION help_mybox_vbox_status 
+#----------------------------------
+function help_mybox_vbox_status(){
+    echo "MYBOX subcommand \"vbox status\" : Show the vm state (on/off etc.) of a VirtualBox VM in host machine."
+    echo "Usage: $me vbox status <vm_name>|<vm_id>"
+    echo "    -h, --help                       Print this help"
+}
+
 #==================================
 # FUNCTION help_mybox_vmware 
 #==================================
@@ -1287,16 +1299,16 @@ function mybox_vbox_modify(){
 function mybox_vbox_remove(){
     local vm_name="$1"
     local force=0
-    if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;
-    else
-        vm_name="$1"
-    fi
-    if [[ ! -z "$2" ]]; then
-        if [[ "$2" == "-f" || "$2" == "--force" ]];then
-            force=1
-        else
-            help_$FUNCNAME;return 1;
+    if [[ ! -z "$1" ]]; then
+        if [[ ! -z "$2" ]]; then
+            if [[ "$2" == "-f" || "$2" == "--force" ]];then
+                force=1
+            else
+                help_$FUNCNAME;return 1;
+            fi
         fi
+    else
+        help_$FUNCNAME;return 1;
     fi
 
     if _check_vm_exist $vm_name; then
@@ -1312,8 +1324,7 @@ function mybox_vbox_remove(){
         fi
     else
         _err_vm_not_found $vm_name
-    fi
-    
+    fi   
 }
 #----------------------------------
 # FUNCTION mybox_vbox_provision 
@@ -1331,7 +1342,38 @@ function mybox_vbox_ssh(){
 # FUNCTION mybox_vbox_info 
 #----------------------------------
 function mybox_vbox_info(){
-    _print_not_support $FUNCNAME $@
+    local vm_name="$1"
+    local machineread=0
+    if ! [[ -z "$1" ]]; then 
+        if [[ ! -z "$2" ]]; then
+            if [[ "$2" == "-m" || "$2" == "--machinereadable" ]];then
+                machineread=1
+            else
+                help_$FUNCNAME; return 1 ;
+            fi
+        fi
+    else
+        help_$FUNCNAME; return 1 ;
+    fi
+    if _check_vm_exist $vm_name; then
+        if [[ $machineread -eq 1 ]]; then
+            vbox_show_vm_info_machinereadable "$vm_name"
+        else
+            vbox_show_vm_info "$vm_name"
+        fi
+    else
+        _err_vm_not_found $vm_name
+    fi
+
+}
+#----------------------------------
+# FUNCTION mybox_vbox_info 
+#----------------------------------
+function mybox_vbox_status(){
+    if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi
+    local vm_name="$1"
+    # etc, VMState="poweroff" -> poweroff
+    mybox_vbox_info "${vm_name}" "-m"|grep VMState=|sed s'/^.*=//'|sed s'/"//g'
 }
 
 ################################################################################

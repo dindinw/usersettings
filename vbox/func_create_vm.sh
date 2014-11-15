@@ -282,6 +282,20 @@ function vbox_delete_vm(){
     return $?
 }
 
+function vbox_show_vm_info()
+{
+    local vm_name="$1"
+    shift
+    local opts="$@"
+    log_debug "VBOX_CMD vboxmanage showvminfo $vm_name $opts"
+    eval vboxmanage showvminfo "$vm_name $opts"
+}
+
+function vbox_show_vm_info_machinereadable()
+{
+    vbox_show_vm_info "$1" "--machinereadable"
+}
+
 
 # Usage:
 # VBoxManage modifyvm [--natpf<1-N> [<rulename>],tcp|udp,[<hostip>],<hostport>,[<guestip>],<guestport>]
