@@ -16,12 +16,12 @@ readonly DEFAULT_NODE="default_node"
 ######################
 function _err_unknown_opts()
 {
-    log_err "Uknown opts " $@
+    log_err "Unknown OPTS " $@
 }
 
 function _err_unknown_command()
 {
-    log_err "Uknown Command " $1
+    log_err "Unknown Command " $1
 }
 
 function _err_file_not_found()
@@ -683,8 +683,11 @@ function help_mybox_vbox(){
 #----------------------------------
 function help_mybox_vbox_list(){
     echo "MYBOX subcommand \"vbox list\" : list all user's VirtualBox VMs in host machine."
-    echo "Usage: $me vbox list"
+    echo "Usage: $me vbox list [<opts>]"
+    echo "    -n|--nameonly                    list result only show vm's name."
     echo "    -r|--running                     list all running VirtualBox VMs."
+    echo "    -os|--ostype <ubuntu|redhat|     list VMs by os type."
+    echo "                  windows>                               "
     echo "    -h, --help                       Print this help"
 }
 #----------------------------------
@@ -1228,19 +1231,73 @@ function mybox_vbox(){
 # FUNCTION mybox_vbox_list 
 #----------------------------------
 function mybox_vbox_list(){
-    case "$1" in
-        "")
-            vbox_list_vm
-            return $?
+    local name=0
+    local running=0
+    local os=""
+    while [[ ! -z "$1" ]];do
+        case "$1" in
+        -n|--nameonly)
+            name=1
+            shift
             ;;
         -r|--running)
-            vbox_list_running_vms
-            return $?
+            running=1
+            shift
+            ;;
+        -os|--ostype)
+            shift
+            os="$1"
+            case "$os" in
+                ubuntu|redhat|windows)
+                    shift
+                    ;;    
+                *)
+                    _err_unknown_opts "--ostype $os"
+                    help_$FUNCNAME;return 1
+                    ;; 
+            esac
             ;;
         *)
             help_$FUNCNAME
+            return 1
             ;;
-    esac
+        esac
+    done
+
+    local vm_list="./_tmp_mybox_vbox_vm_list"
+
+    if [ $running -eq 1 ]; then
+        vbox_list_running_vms > $vm_list
+    else
+        vbox_list_vm > $vm_list
+    fi
+    if ! [ -z $os ];then
+        log_trace "The selected ostype is \"$os\""
+        # need to filter the os type of vm
+        cat $vm_list|while read line; do
+            log_trace "line read : $line"
+            local vm_name=$(echo $line|awk '{print $1}'|sed s'/"//g')
+            log_trace "Checking the ostype for VM \"$vm_name\""
+            local ostype=$(mybox_vbox_info $vm_name -m|grep ostype|sed s'/ostype=//')
+            log_trace "-----------> ostype $ostype"
+            local ostype_s=$(to_lowercase $(echo $ostype|sed s'/"//g'))
+            log_trace "-----------> ostype $ostype_s"
+            if [[ $ostype_s == $os ]]; then
+                if [[ $name -eq 1 ]]; then
+                    echo $vm_name
+                else
+                    echo $line
+                fi
+            fi
+        done
+    else
+        if [[ $name -eq 1 ]]; then
+            cat $vm_list|awk '{print $1}'|sed s'/"//g'
+        else
+            cat $vm_list
+        fi
+    fi
+    rm $vm_list
 }
 #----------------------------------
 # FUNCTION mybox_vbox_start 

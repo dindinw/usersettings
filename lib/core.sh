@@ -30,7 +30,9 @@ readonly LOG_LEVEL_INFO=3
 readonly LOG_LEVEL_DEBUG=4
 readonly LOG_LEVEL_TRACE=5
 
-LOG_LEVEL=$LOG_LEVEL_DEBUG
+if [[ -z $LOG_LEVEL ]]; then
+    LOG_LEVEL=$LOG_LEVEL_DEBUG
+fi
 LOG_OUTPUT=STDOUT
 #LOG_STYLE="$(date)"
 
@@ -72,6 +74,14 @@ function log_trace(){
     _log $LOG_LEVEL_TRACE "TRACE: $@"
 }
 
+function to_uppercase()
+{
+    echo "$1"| tr '[:lower:]' '[:upper:]'
+}
+function to_lowercase()
+{
+    echo "$1"| tr '[:upper:]' '[:lower:]'
+}
 
 function uuid()
 {
@@ -120,8 +130,8 @@ function confirm(){
     esac
 }
 
-
-function currentDir()
+# TODO, fixed name, it's not current dir , but the script execute dir
+function executeDir()
 {
     local DIR=$( cd "$( dirname "$0" )" && pwd )
     echo $DIR
