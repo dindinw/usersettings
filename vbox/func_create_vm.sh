@@ -273,13 +273,20 @@ function vbox_stop_vm(){
     local vm_name="$1"
     echo Stopping VBOX VM \"${vm_name}\" ...
     VBoxManage controlvm ${vm_name} poweroff
+    if [[ $? -eq 0 ]]; then
+        echo VM \"${vm_name}\" has been successfully stopped.
+    fi
 }
 
 function vbox_delete_vm(){
     local vm_name=$1
     echo "Delete VBOX VM \"${vm_name}\" ..."
     vboxmanage unregistervm "$vm_name" --delete
-    return $?
+    local ret=$?
+    if [[ $ret -eq 0 ]]; then
+        echo VM \"${vm_name}\" has been successfully deleted.
+    fi
+    return $ret
 }
 
 function vbox_show_vm_info()
