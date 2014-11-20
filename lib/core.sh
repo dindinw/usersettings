@@ -2,19 +2,11 @@
 
 function trace_begin()
 {
-    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    echo "!!! BASH EXECUTION TRACE BEGIN                                    !!!"
-    echo "!!!                                                               !!!"
-    cmd /c sleep -m 1 1>/dev/null
     set -x
 }
 function trace_end()
 {
     set +x
-    cmd /c sleep -m 1 1>/dev/null
-    echo "!!!                                                               !!!"
-    echo "!!! BASH EXECUTION TRACE END                                      !!!"
-    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 }
 
 
