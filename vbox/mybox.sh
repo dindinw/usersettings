@@ -67,7 +67,7 @@ function _check_home()
 {
     if [ -z "${MYBOX_HOME}" ] ; then
         MYBOX_HOME="D:\Boxes"
-        echo "WARNING: env \"MYBOX_HOME\" not set! using default path under \"${MYBOX_HOME}\""
+        log_warn "Environment variable \"MYBOX_HOME\" not set! using default path under \"${MYBOX_HOME}\""
     fi
     MYBOX_HOME=$(to_unix_path $MYBOX_HOME)
     if [ ! -e "${MYBOX_HOME}" ]; then
@@ -76,7 +76,7 @@ function _check_home()
     fi
     if [ -z "${VBOX_HOME}" ] ; then
         VBOX_HOME="${HOME}/VirtualBox VMs"
-        echo "WARNING: env \"VBOX_HOME\" not set! using default path under \"${VBOX_HOME}\""
+        log_warn "Environment variable \"VBOX_HOME\" not set! using default path under \"${VBOX_HOME}\""
     fi
     if [ ! -e "${VBOX_HOME}" ]; then
         echo "ERROR: VBOX_HOME=\"{VBOX_HOME}\" not exist, exit"
@@ -432,6 +432,9 @@ function usage()
 }
 function usage_internal()
 {
+    echo "MYBOX Internal Commands help"
+    echo "    -H                      Print this help (more internal commands)."
+    echo "    -T command [<args]      report the elapsed time."
     echo 
     help_mybox_box
     echo 
@@ -443,6 +446,7 @@ function usage_internal()
     echo 
     echo "!!! NOTE: Some Node/VM command is for internal test only. please use carefully "
     echo "    improperly usage may result a corrupted  MYBOX environment.          "
+    echo "For help on any individual command run \"$me COMMAND -h\""
 }
 
 function version()
@@ -1654,11 +1658,16 @@ function main(){
                 version
                 ;;
             -H)
-                usage
                 usage_internal
                 ;;
             *)
-                _call_command $@
+                local opt=$1;
+                if [ $opt == "-T" ];then # a hiden opt to report executed time for brenchmark
+                    shift
+                    _time _call_command $@
+                else
+                    _call_command $@
+                fi
                 ;;
     esac
 }

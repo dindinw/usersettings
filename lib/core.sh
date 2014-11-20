@@ -17,6 +17,22 @@ function trace_end()
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 }
 
+
+################################################################################
+# 
+# Time  Functions
+#
+################################################################################
+
+function _time(){
+    let length=${#@}
+    #TIMEFORMAT="[Finished \"${@:2:${#@}}\" in %3lR]"
+    TIMEFORMAT="
+[Finished in %3lR]"
+    time eval "$@"
+    unset TIMEFORMAT
+}
+
 ################################################################################
 # 
 # LOG Functions
@@ -31,7 +47,7 @@ readonly LOG_LEVEL_DEBUG=4
 readonly LOG_LEVEL_TRACE=5
 
 if [[ -z $LOG_LEVEL ]]; then
-    LOG_LEVEL=$LOG_LEVEL_DEBUG
+    LOG_LEVEL=$LOG_LEVEL_ERROR
 fi
 LOG_OUTPUT=STDOUT
 #LOG_STYLE="$(date)"
