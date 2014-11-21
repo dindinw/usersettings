@@ -9,6 +9,8 @@ BOXCONF=".boxconfig"
 BOXFOLDER=".mybox"
 readonly MYBOX="mybox"
 readonly DEFAULT_NODE="default_node"
+MYBOX_USABLE_PORT_RANGE="2251..2300"
+_VBOX_USED_PORT_LIST=""
 
 
 ######################
@@ -45,6 +47,10 @@ function _err_vm_not_found(){
 
 function _err_vm_exist(){
     log_err "VirtualBox VM \"$1\" exist"
+}
+
+function _err_vm_ssh_not_setup(){
+    log_err "VirtualBox VM \"$1\" guest ssh not setup. please use \"vbox modify --ssh\" to setup."
 }
 
 function _err_not_null(){
@@ -718,13 +724,22 @@ function help_mybox_vbox_stop(){
 # FUNCTION help_mybox_vbox_modify 
 #----------------------------------
 function help_mybox_vbox_modify(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"vbox modify\" : modify a VirtualBox VM in host machine."
+    echo "Usage: $me vbox modify <vm_name>|<vm_id>"
+    echo "    --ssh <port>                     Set Guset SSH port for the VM."
+    echo "    --ssh delete                     Remove the Guest SSH from the VM."
+    echo "    -f, --force                      force to do modify." 
+    echo "    -h, --help                       Print this help"
+
 }
 #----------------------------------
 # FUNCTION help_mybox_vbox_remove 
 #----------------------------------
 function help_mybox_vbox_remove(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"vbox remove\" : remove a VirtualBox VM in host machine."
+    echo "Usage: $me vbox remove <vm_name>|<vm_id>"
+    echo "    -f, --force                      force to remove." 
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_vbox_provision 
@@ -736,7 +751,9 @@ function help_mybox_vbox_provision(){
 # FUNCTION help_mybox_vbox_ssh 
 #----------------------------------
 function help_mybox_vbox_ssh(){
-    _print_not_support $FUNCNAME $@
+    echo "MYBOX subcommand \"vbox remove\" : connect to a VirtualBox VM in host machine by SSH."
+    echo "Usage: $me vbox ssh <vm_name>|<vm_id>"
+    echo "    -h, --help                       Print this help"
 }
 #----------------------------------
 # FUNCTION help_mybox_vbox_info 
@@ -1386,6 +1403,7 @@ function mybox_vbox_modify(){
     if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi
     local vm_name="$1"
     local force=0
+    local ssh=0
     shift
     while [[ ! -z "$1" ]];do
         case "$1" in
@@ -1393,20 +1411,81 @@ function mybox_vbox_modify(){
                 shift
                 force=1
                 ;;
+            --ssh)
+                shift
+                ssh=1
+                if [[ ! -z "$1" ]];then 
+                    if is_port "$1";then
+                        local ssh_add=1
+                        local ssh_port=$1
+                        shift
+                    elif [[ "$1" == "delete" ]];then
+                        local ssh_delete=1
+                        shift
+                    fi
+                else
+                    help_$FUNCNAME; return 1 ;
+                fi
+                ;;
             **)
                 shift
                 help_$FUNCNAME; return 1 ;
                 ;;
         esac
     done
+    if ! _check_vm_exist $vm_name; then
+        _err_vm_not_found $vm_name
+        return 1
+    fi
     if _check_vm_running $vm_name; then
-        if [[ $force -eq 1 ]] || confirm "VM \"$vm_name\" is running, need to stop before do mofify, continue to stop it"; then
+        if [[ $force -eq 1 ]] || confirm "VM \"$vm_name\" is running, need to stop it before it can be modified, continue to stop it"; then
             vbox_stop_vm $vm_name
         else
             #cancle modify and exit
             return 1
         fi
     fi
+
+    if [[ $ssh -eq 1 ]];then
+        if [[ $ssh_add -eq 1 ]];then
+            _modify_vbox_guestssh $vm_name $ssh_port
+        fi
+        if [[ $ssh_delete -eq 1 ]];then
+            _delete_vbox_guestssh $vm_name $ssh_port
+        fi
+
+    fi
+}
+
+function _mybox_usable_ports(){
+    local start=$(echo $MYBOX_USABLE_PORT_RANGE|sed 's/\.\..*//')
+    local end=$(echo $MYBOX_USABLE_PORT_RANGE|sed 's/.*\.\.//')
+    log_debug $start $end
+    for ((port=$start; port<=$end; port++));do
+        echo -n "$port "
+    done
+}
+
+function _vbox_used_ports(){
+    local ports=$(echo $_VBOX_USED_PORT_LIST|sed s'/,/ /g')
+    echo -n "$ports "
+}
+
+function _check_port_usable(){
+    _mybox_usable_ports|grep "$1 " > /dev/null
+    if [ $? -eq 0 ];then #if in usable ports, now test if already used
+        _vbox_used_ports|grep "$1 " > /dev/null
+        if [ $? -eq 0 ]; then
+            return 1; #port used, not usable
+        else
+            # still need to check with nc under localhost
+            if is_port_open "127.0.0.1" "$1"; then
+                return 1; # port open under localhost, not usable
+            fi
+            return 0; #port not used, ok to use 
+        fi
+    fi
+    return 1 ; #port not in usable list
 }
 # the idea is , the port should always cleaned before we started the node, so, every time we removed the guest ssh
 # rule and add a new rule with avalible port. user don't need to know what the port it's. 
@@ -1418,29 +1497,54 @@ function mybox_vbox_modify(){
 # 5. if ok, add the forwarding rule by the port. 
 # 6. if still fail, error that the usable ports had been used up.
 function _modify_vbox_guestssh(){
-    local $vm_name="$1"
+    local vm_name="$1"
+    local port="$2"
     if _check_vbox_guestssh_rule_exist $vm_name ; then
-        vbox_guestssh_remove $vm_name "mybox_gusetssh"
+        vbox_guestssh_remove $vm_name "mybox_guestssh"
     fi
-    vbox_guestssh_setup $vm_name $port "mybox_gusetssh"
+    vbox_guestssh_setup $vm_name $port "mybox_guestssh"
+}
+function _delete_vbox_guestssh(){
+    local vm_name="$1"
+    local port="$2"
+    if _check_vbox_guestssh_rule_exist $vm_name ; then
+        vbox_guestssh_remove $vm_name "mybox_guestssh"
+    fi
 }
 
 function _check_vbox_guestssh_rule_exist(){
     local $vm_name="$1"
-    mybox_vbox_info $vm_name -m|grep "mybox_gusetssh" > /dev/null
+    mybox_vbox_info $vm_name -m|grep "mybox_guestssh" > /dev/null
     return $?
 }
-function _get_all_fowarding_rules(){
+function _get_all_vbox_fowarding_rules(){
     for vm_name in $(mybox_vbox_list -f uuid); do
-        mybox_vbox_info $vm_name -m | grep "Forwarding"
+        _get_vbox_fowarding_rule "$vm_name"
     done
+}
+function _get_vbox_fowarding_rule(){
+    local vm_id="$1"
+    mybox_vbox_info $vm_id -m | grep "Forwarding.*="
+}
+function _get_mybox_guestssh_fowarding_rule(){
+    local vm_id="$1"
+    mybox_vbox_info $vm_id -m | grep "Forwarding.*=.*mybox_guestssh"
 }
 function _get_all_vbox_used_fowarding_ports(){
     for vm_id in $(mybox_vbox_list -f name); do 
         #Forwarding(0)="guestssh,tcp,,2222,,22"-->2222
-        mybox_vbox_info $vm_id -m |grep Forwarding|sed s'/.*=//'|sed s'/"//g'|awk -F',' '{print $4}'
+        _get_vbox_fowarding_port "$vm_id"
     done
 }
+function _get_vbox_fowarding_port(){
+    local vm_id="$1"
+    _get_vbox_fowarding_rule "$vm_id"|sed s'/.*=//'|sed s'/"//g'|awk -F',' '{print $4}'
+}
+function _get_mybox_guestssh_fowarding_port(){
+    local vm_id="$1"
+    _get_mybox_guestssh_fowarding_rule "$vm_id"|sed s'/.*=//'|sed s'/"//g'|awk -F',' '{print $4}'
+}
+
 
 #----------------------------------
 # FUNCTION mybox_vbox_remove 
@@ -1485,7 +1589,23 @@ function mybox_vbox_provision(){
 # FUNCTION mybox_vbox_ssh 
 #----------------------------------
 function mybox_vbox_ssh(){
-    ssh -i ~/vagrant.key.private vagrant@127.0.0.1 -p 2222
+    local vm_name="$1"
+    local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
+
+    if [[ -z $port ]];then
+        #port not found
+        _err_vm_ssh_not_setup "$vm_name" 
+        return 1
+    fi
+    if _check_vm_exist $vm_name; then
+        if ! _check_vm_running $vm_name; then
+            mybox_vbox_start $vm_name
+        fi
+    else
+        _err_vm_not_found $vm_name
+        return 1
+    fi
+    ssh -i ~/vagrant.key.private vagrant@127.0.0.1 -p "$port"
 }
 #----------------------------------
 # FUNCTION mybox_vbox_info 
