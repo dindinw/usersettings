@@ -255,17 +255,27 @@ function __get_box_metadata()
     local boxname="$1"
     local boxfile="${MYBOX_HOME}/${boxname}.box"
 
-    extract_win "${boxfile}" "${boxname}.ovf" "${MYBOX_HOME}" > /dev/null
+    local ovfname="${boxname}.ovf"
+    
+    #Vagrant box competible
+    listtar_win $boxfile |grep Vagrantfile > /dev/null
+    if [[ $? -eq 0 ]]; then
+        #It's a Vagrant BOX
+        log_debug "BOX : ${boxname} is a Vagrant box."
+        ovfname="box.ovf"
+    fi
+
+    extract_win "${boxfile}" "${ovfname}" "${MYBOX_HOME}" > /dev/null
 
     if [[ $? == 0 ]];then
         echo 
         echo "====================================================================="
         echo "BOX NAME: $boxname"
         echo "---------------------------------------------------------------------" 
-        cat "${MYBOX_HOME}/${boxname}.ovf" |grep "vbox:Machine"
+        cat "${MYBOX_HOME}/${ovfname}" |grep "vbox:Machine"
     fi
 
-    rm "${MYBOX_HOME}/${boxname}.ovf"
+    rm "${MYBOX_HOME}/${ovfname}"
 }
 
 ######################
@@ -278,12 +288,31 @@ function _import_box_to_vbox_vm() {
     local boxname="$1"
     local boxfile="${MYBOX_HOME}/$boxname.box"
     local vm_name="$2"
+    local ovfname="${boxname}.ovf"
+    local is_vagrant=0
+
+    #Vagrant box competible
+    listtar_win $boxfile |grep Vagrantfile > /dev/null
+    if [[ $? -eq 0 ]]; then
+        #It's a Vagrant BOX
+        log_debug "BOX : ${boxname} is a Vagrant box."
+        is_vagrant=1
+        ovfname="box.ovf"
+    fi
 
     if [[ ! -e "${MYBOX_HOME}/${boxname}" ]]; then
         mkdir -p "${MYBOX_HOME}/${boxname}"
         untar_win "${boxfile}" "${MYBOX_HOME}/${boxname}" > /dev/null
     fi
-    vbox_import_ovf "${MYBOX_HOME}/${boxname}/${boxname}.ovf" "$vm_name"
+    vbox_import_ovf "${MYBOX_HOME}/${boxname}/${ovfname}" "$vm_name"
+
+    if [[ $is_vagrant -eq 1 ]]; then
+        # try to migrate vagrent vm to mybox vm
+        mybox_vbox_ssh-setup "$vm_name" -a 2300
+        mybox_vbox_migrate "$vm_name"
+        mybox_vbox_migrate "$vm_name"
+        #mybox_vbox_stop "$vm_name"
+    fi
     return $?
 }
 
@@ -2693,7 +2722,7 @@ function mybox_vbox_migrate(){
     fi
     if ! _check_vm_running $vm_name; then
         echo "VBOX VM \"${vm_name}\" neet to be started..."
-        vbox_start_vm "$vm_name"
+        vbox_start_vm "$vm_name" "headless"
     fi
     echo "Checking if \"$vm_name\" is a Vagrant VM ..."
     if _check_vagrant $vm_name; then
@@ -2732,14 +2761,6 @@ function _migrate_to_mybox(){
     local mybox_pub_key=$(cat $MYBOX_HOME_DIR/keys/mybox.pub)
 cat <<EOF > $SCRIPT
 # Create mybox user
-cat /etc/passwd |grep ^mybox:
-if [[ $? -eq 0 ]]; then
-    deluser mybox --remove-home
-fi
-cat /etc/group |grep ^mybox:
-if [[ ! $? -eq 0 ]]; then
-    delgroup mybox
-fi
 groupadd mybox
 useradd mybox -g mybox -G admin -s /bin/bash -m -d /home/mybox
 if [[ -f /etc/lsb-release ]]; then
@@ -2759,9 +2780,10 @@ chown -R mybox:mybox /home/mybox/.ssh
 chmod -R u=rwX,go= /home/mybox/.ssh
 EOF
     local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
-    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant -P "$port" "$SCRIPT" vagrant@127.0.0.1:~
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant -P "$port" "$SCRIPT" vagrant@127.0.0.1:~ 1>/dev/null 2>&1
     if [[ $? -eq 0 ]]; then rm $SCRIPT; fi;
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p "$port" "sudo bash /home/vagrant/$SCRIPT; rm /home/vagrant/$SCRIPT"
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p "$port" "sudo bash /home/vagrant/$SCRIPT;rm /home/vagrant/$SCRIPT" 2>/dev/null 
+         
 
 }
 #----------------------------------

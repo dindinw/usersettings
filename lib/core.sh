@@ -190,6 +190,16 @@ function _7z_archive()
     7z a archive_name "$file_names/*"
 }
 
+function _7z_list()
+{
+    local archive_name="$1"
+    7z l $archive_name 
+}
+
+function listtar_win(){
+    _7z_list "$1"
+}
+
 function tar_win(){
     local archive_name="$1"
     local file_names="$2"
