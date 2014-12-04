@@ -2682,7 +2682,87 @@ function mybox_vbox_info(){
 #----------------------------------
 function mybox_vbox_migrate(){
     local vm_name="$1"
+
+    if [[ -z "$vm_name" ]]; then 
+        help_$FUNCNAME
+        return 1
+    fi
+    if ! _check_vm_exist "$vm_name"; then
+        _err_vm_not_found $vm_name
+        return 1
+    fi
+    if ! _check_vm_running $vm_name; then
+        echo "VBOX VM \"${vm_name}\" neet to be started..."
+        vbox_start_vm "$vm_name"
+    fi
     echo "Checking if \"$vm_name\" is a Vagrant VM ..."
+    if _check_vagrant $vm_name; then
+        echo "Vagrent VM check OK, try to do migration ..."
+        _migrate_to_mybox $vm_name
+        if [[ $? -eq 0 ]]; then
+            echo "VBOX VM \"${vm_name}\" migrate to MYBOX VM OK!"
+        fi
+    fi
+}
+
+function _check_vagrant(){
+    local vm_name=$1
+    local KEY_PRV_VAGRANT="https://raw.githubusercontent.com/mitchellh/vagrant/master/keys/vagrant"
+    if [[ ! -f $MYBOX_HOME_DIR/keys/vagrant ]]; then
+        curl -s -o$MYBOX_HOME_DIR/keys/vagrant -L $KEY_PRV_VAGRANT
+    fi
+    local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
+    if [[ -z $port ]]; then
+        log_err "The VM guest ssh not setup. can not process"
+        return 1
+    fi 
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p $port "whoami" 2>/dev/null |grep ^vagrant$ 
+
+    if [[ $? -eq 0 ]]; then
+        return 0
+    else
+        log_err "The VM is not a Vagrant VM."
+        return 1
+    fi
+}
+
+function _migrate_to_mybox(){
+    local vm_name=$1
+    local SCRIPT="_migrate_to_mybox_script.sh"
+    local mybox_pub_key=$(cat $MYBOX_HOME_DIR/keys/mybox.pub)
+cat <<EOF > $SCRIPT
+# Create mybox user
+cat /etc/passwd |grep ^mybox:
+if [[ $? -eq 0 ]]; then
+    deluser mybox --remove-home
+fi
+cat /etc/group |grep ^mybox:
+if [[ ! $? -eq 0 ]]; then
+    delgroup mybox
+fi
+groupadd mybox
+useradd mybox -g mybox -G admin -s /bin/bash -m -d /home/mybox
+if [[ -f /etc/lsb-release ]]; then
+    echo mybox:mybox | /usr/sbin/chpasswd
+else
+    echo "mybox" | passwd --stdin mybox
+fi
+
+# Install mybox keys
+mkdir -p /home/mybox/.ssh
+
+cat <<EOM >/home/mybox/.ssh/authorized_keys
+$mybox_pub_key
+EOM
+
+chown -R mybox:mybox /home/mybox/.ssh
+chmod -R u=rwX,go= /home/mybox/.ssh
+EOF
+    local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant -P "$port" "$SCRIPT" vagrant@127.0.0.1:~
+    if [[ $? -eq 0 ]]; then rm $SCRIPT; fi;
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p "$port" "sudo bash /home/vagrant/$SCRIPT; rm /home/vagrant/$SCRIPT"
+
 }
 #----------------------------------
 # FUNCTION mybox_vbox_status
