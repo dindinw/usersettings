@@ -310,8 +310,8 @@ function _import_box_to_vbox_vm() {
         # try to migrate vagrent vm to mybox vm
         mybox_vbox_ssh-setup "$vm_name" -a 2300
         mybox_vbox_migrate "$vm_name"
-        mybox_vbox_migrate "$vm_name"
-        #mybox_vbox_stop "$vm_name"
+        vbox_wait_vm_shutdown "$vm_name"
+        mybox_vbox_ssh-setup "$vm_name" -d
     fi
     return $?
 }
@@ -2759,8 +2759,9 @@ function _migrate_to_mybox(){
     local vm_name=$1
     local SCRIPT="_migrate_to_mybox_script.sh"
     local mybox_pub_key=$(cat $MYBOX_HOME_DIR/keys/mybox.pub)
-cat <<EOF > $SCRIPT
+cat <<EOF > "./$SCRIPT"
 # Create mybox user
+# userdel mybox -r
 groupadd mybox
 useradd mybox -g mybox -G admin -s /bin/bash -m -d /home/mybox
 if [[ -f /etc/lsb-release ]]; then
@@ -2780,11 +2781,9 @@ chown -R mybox:mybox /home/mybox/.ssh
 chmod -R u=rwX,go= /home/mybox/.ssh
 EOF
     local port=$(_get_mybox_guestssh_fowarding_port $vm_name)
-    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant -P "$port" "$SCRIPT" vagrant@127.0.0.1:~ 1>/dev/null 2>&1
-    if [[ $? -eq 0 ]]; then rm $SCRIPT; fi;
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p "$port" "sudo bash /home/vagrant/$SCRIPT;rm /home/vagrant/$SCRIPT" 2>/dev/null 
-         
-
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant -P "$port" ./$SCRIPT vagrant@127.0.0.1:~ 2>/dev/null
+    if [[ $? -eq 0 ]]; then rm ./$SCRIPT ; fi;
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $MYBOX_HOME_DIR/keys/vagrant vagrant@127.0.0.1 -p "$port" "sudo bash /home/vagrant/$SCRIPT; rm /home/vagrant/$SCRIPT; sudo shutdown -h now" 2>/dev/null
 }
 #----------------------------------
 # FUNCTION mybox_vbox_status

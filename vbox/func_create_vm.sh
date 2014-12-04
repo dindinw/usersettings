@@ -330,7 +330,7 @@ function vbox_guestssh_remove(){
 function vbox_wait_vm_shutdown() {
     local vm_id="$1"
     while VBoxManage list runningvms | grep "${vm_id}" >/dev/null; do
-        sleep 20
+        sleep 1
         echo -n "."
     done
     echo ""
