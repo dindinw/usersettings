@@ -421,7 +421,7 @@ readonly COMMANDS=(
     "myboxsub:box node vbox vmware"
     "box:add list detail remove pkgvbox impvbox pkgvmware impvmware"
     "node:list import start stop modify remove provision ssh scp info"
-    "vbox:list start stop modify remove ssh ssh-setup scp info status"
+    "vbox:list start stop modify remove ssh ssh-setup scp info status migrate"
     "vmware:list start stop modify remove ssh info"
     )
 
@@ -763,6 +763,7 @@ function help_mybox_vbox(){
     echo "    vbox ssh          connects to a VirtualBox VM."
     echo "    vbox ssh-setup    setup geust ssh to a VirtualBox VM."
     echo "    vbox info         show detail information of a VirtualBox VM."
+    echo "    vbox migrate      migrate a Vagrant VM into a MYBOX VM."
     echo "    vbox status       show the vm state (on/off) of a VirtualBox VM."
 }
 #----------------------------------
@@ -976,6 +977,16 @@ function help_mybox_vbox_info(){
     echo "    -m, --machinereadable            Show machine-friendly output in the standard propreties format"
     echo "    -h, --help                       Print this help"
 }
+
+#----------------------------------
+# FUNCTION help_mybox_vbox_status 
+#----------------------------------
+function help_mybox_vbox_migrate(){
+    echo "MYBOX subcommand \"vbox migrate\" : migrate a Vagrant VM into a MYBOX VM.."
+    echo "Usage: $me vbox migrate <vm_name>|<vm_id>"
+    echo "    -h, --help                       Print this help"
+}
+
 #----------------------------------
 # FUNCTION help_mybox_vbox_status 
 #----------------------------------
@@ -2667,7 +2678,14 @@ function mybox_vbox_info(){
 
 }
 #----------------------------------
-# FUNCTION mybox_vbox_info 
+# FUNCTION mybox_vbox_migrate
+#----------------------------------
+function mybox_vbox_migrate(){
+    local vm_name="$1"
+    echo "Checking if \"$vm_name\" is a Vagrant VM ..."
+}
+#----------------------------------
+# FUNCTION mybox_vbox_status
 #----------------------------------
 function mybox_vbox_status(){
     if [[ -z "$1" ]]; then help_$FUNCNAME; return 1 ;fi
