@@ -71,6 +71,19 @@ function iso_umount_win() {
 
 }
 
+function iso_mount_mac() {
+    if [[ -z "${ISO_MOUNT_PATH}" ]]; then
+        echo "ERROR: ISO_MOUNT_PATH not set."
+        exit 1
+    fi
+    echo "mount iso ${INSTALLER} to ${ISO_MOUNT_PATH}" 
+    hdiutil attach -mountpoint ${ISO_MOUNT_PATH} ${INSTALLER}
+}
+function iso_umount_mac() {
+    echo "umount ${ISO_MOUNT_PATH}" 
+    hdiutil detach ${ISO_MOUNT_PATH} 
+}
+
 ##########################################
 # TFTP functions 
 ##########################################
@@ -93,6 +106,13 @@ function tftp_stop_win(){
     taskkill //PID $tftpd_pid
 }
 
+function tftp_start_mac(){
+    sudo ./tftp_macosx.sh start
+}
+
+function tftp_stop_mac(){
+    sudo ./tftp_macosx.sh stop
+}
 function tftp_folder_prepare(){
     #TFTP=${1:-"$VBOX_TFTP_DEFAULT"}
     local tftp_path=${1:-"$TFTP_PATH"}
@@ -437,7 +457,11 @@ function start_kickstart_service(){
     local cfg=${3:-$KS_CFG} #default is ks.cfg
     echo 'At the boot prompt, hit <TAB> and then type:'
     echo " ks=http://${ip}:${port}"
-    sh ./httpd.sh ${cfg} | nc -l -p ${port} > /dev/null
+    if [[ "${arch}" == "mac" ]]; then
+       sh ./httpd.sh ${cfg} | nc -l ${port} > /dev/null
+    else
+       sh ./httpd.sh ${cfg} | nc -l -p ${port} > /dev/null
+    fi
  }
 
 
