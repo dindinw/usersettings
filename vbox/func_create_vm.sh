@@ -76,12 +76,12 @@ function iso_mount_mac() {
         echo "ERROR: ISO_MOUNT_PATH not set."
         exit 1
     fi
-    echo "mount iso ${INSTALLER} to ${ISO_MOUNT_PATH}" 
+    echo "mount iso ${INSTALLER} to ${ISO_MOUNT_PATH}"
     hdiutil attach -mountpoint ${ISO_MOUNT_PATH} ${INSTALLER}
 }
 function iso_umount_mac() {
-    echo "umount ${ISO_MOUNT_PATH}" 
-    hdiutil detach ${ISO_MOUNT_PATH} 
+    echo "umount ${ISO_MOUNT_PATH}"
+    hdiutil detach ${ISO_MOUNT_PATH}
 }
 
 ##########################################
@@ -107,11 +107,11 @@ function tftp_stop_win(){
 }
 
 function tftp_start_mac(){
-    sudo ./tftp_macosx.sh start
+    ./tftp_macosx.sh start
 }
 
 function tftp_stop_mac(){
-    sudo ./tftp_macosx.sh stop
+    ./tftp_macosx.sh stop
 }
 function tftp_folder_prepare(){
     #TFTP=${1:-"$VBOX_TFTP_DEFAULT"}
@@ -377,7 +377,7 @@ function vbox_install_guestadditions(){
     curl --output mybox_id_rsa -L "https://raw.githubusercontent.com/dindinw/usersettings/master/vbox/keys/mybox"
     if [[ -f mybox_id_rsa ]]; then
         chmod 600 mybox_id_rsa
-        ssh -i mybox_id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 2222 mybox@127.0.0.1 "sudo mount /dev/cdrom /media/cdrom; sudo sh /media/cdrom/VBoxLinuxAdditions.run; sudo umount /media/cdrom; sudo shutdown -h now"
+        ssh -i mybox_id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 2222 mybox@127.0.0.1 "sudo mkdir -p /media/cdrom; sudo mount /dev/cdrom /media/cdrom; sudo sh /media/cdrom/VBoxLinuxAdditions.run; sudo umount /media/cdrom; sudo shutdown -h now"
     fi
 }
 

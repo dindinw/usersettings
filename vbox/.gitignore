@@ -8,3 +8,4 @@ bcdboot.exe
 vagrant
 vagrant_id_rsa
 floppy.img
+mybox_id_rsa

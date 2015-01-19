@@ -80,13 +80,10 @@ function main_template(){
     tftp_stop_$arch
     iso_umount_$arch
 
-    # detach floopy
-    vbox_detach_floopy
-
     echo "Waiting for OS installion for VM \"${NAME}\" to finish ..."
     vbox_wait_vm_shutdown ${NAME}
 
-    echo "Install Vbox GUESTADDITIONS into VM \"${NAME}\" ..."
+    echo "Install Vbox ${GUESTADDITIONS} into VM \"${NAME}\" ..."
     vbox_guestssh_setup ${NAME}
     vbox_attach_iso ${NAME} "${GUESTADDITIONS}"
     vbox_start_vm ${NAME}
