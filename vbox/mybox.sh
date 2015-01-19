@@ -168,7 +168,7 @@ function _check_gnused_install_mac(){
         export PATH=/usr/local/bin:$PATH
     else
         log_err "GNU sed not intalled, please install it by execute command :"
-        log_err "\t brew install gnu-sed --default-names"
+        log_err "\t brew install gnu-sed --with-default-names"
         __print_need_to_install_homebrew
        exit 1
     fi
@@ -178,7 +178,7 @@ function _check_gnufind_install_mac(){
         export PATH=/usr/local/bin:$PATH
     else
         log_err "GNU find not intalled, please install it by execute command :"
-        log_err "\t brew install findutils --default-names"
+        log_err "\t brew install findutils --with-default-names"
         __print_need_to_install_homebrew
        exit 1
     fi
