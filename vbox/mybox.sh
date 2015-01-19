@@ -186,7 +186,7 @@ function _check_gnufind_install_mac(){
 function __print_need_to_install_homebrew(){
     log_err "You may need to install Homebrew (http://brew.sh) first before you can use 'brew install'"
     log_err "To install homebrew, try to execute command in terminal : "
-    log_err "\t" 'ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"'
+    log_err "\t" 'ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
     log_err "See https://github.com/Homebrew/homebrew/wiki/Installation for more details"
  
 }
