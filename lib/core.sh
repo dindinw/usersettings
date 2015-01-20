@@ -229,8 +229,8 @@ function tar_win(){
 function tar_mac(){
     local archive_name="$1"
     local file_names="$(basename $2)"
-    log_debug gtar -cvf $archive_name $file_names/*
-    gtar -cvf $archive_name $file_names/*
+    log_debug gtar -cvf $archive_name -C $file_names .
+    gtar -cvf "$archive_name" -C "$file_names" .
 }
 
 function untar_win(){
@@ -268,6 +268,14 @@ function extract_win(){
     local extract_file_name=$(to_win_path "$2")
     local output_dir=$(to_win_path "$3")
     _7z_extract $archive_name $extract_file_name $output_dir
+}
+
+function extract_mac(){
+    local archive_name=$(to_unix_path "$1")
+    local extract_file_name=$(to_unix_path "$2") 
+    local output_dir=$(to_unix_path "$3")
+    echo gtar xvf "$archive_name" -C "$output_dir" "$extract_file_name"
+    gtar xvf "$archive_name" -C "$output_dir" ./"$extract_file_name"
 }
 
 function to_unix_path(){
