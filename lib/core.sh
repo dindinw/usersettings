@@ -164,7 +164,7 @@ function confirm(){
 function is_port_open(){
     local ip="$1"
     local port="$2"
-    nc -z "$ip" "$port"
+    nc -z "$ip" "$port" > /dev/null
     return $?
 }
 
