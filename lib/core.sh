@@ -226,6 +226,13 @@ function tar_win(){
     7z a -ttar "$archive_name" "$file_names/*" 
 }
 
+function tar_mac(){
+    local archive_name="$1"
+    local file_names="$(basename $2)"
+    log_debug gtar -cvf $archive_name $file_names/*
+    gtar -cvf $archive_name $file_names/*
+}
+
 function untar_win(){
     local archive_name="$1"
     local output_dir="$2"
