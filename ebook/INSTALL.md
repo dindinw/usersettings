@@ -25,6 +25,9 @@ NODE_PATH is required for windows7
 
     $ export NODE_PATH=$APPDATA\\npm\\node_modules
 
+    NOTE: use 'setx' in windows 7 to set the Enviroment variable 
+    setx NODE_PATH "%APPDATA%\npm\node_modules"
+
 DONE!
 
     $ node rename.js
