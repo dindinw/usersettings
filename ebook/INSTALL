@@ -14,9 +14,6 @@ $ npm config ls -l |grep registry
 registry = "https://registry.npm.taobao.org/"
 ; registry = "https://registry.npmjs.org/" (overridden)
 
-$ npm config ls -l |grep registry
-registry = "https://registry.npm.taobao.org/"
-; registry = "https://registry.npmjs.org/" (overridden)
 ~~~~
 
 
