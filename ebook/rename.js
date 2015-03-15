@@ -29,7 +29,7 @@ var MONTH_ABBREV_REGXP="(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 var ISBN10_REGXP="\\d{9}[\\d|X]"
 var ISBN13_REGXP="(978|979)(?:-|)\\d{9}[\\d|X]"
 var EDTION_REGXP="\\d{1}"
-var ASIN_REGXP="[A-Z0-9]{10}"
+var ASIN_REGXP="((?![a-zA-Z]{10})[a-zA-Z0-9]{10})"  //(?![A-Z]{10}) means not ALL letters, at least a number
 
 
 
