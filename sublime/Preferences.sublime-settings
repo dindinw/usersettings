@@ -1,10 +1,9 @@
 {
-    "ignored_packages":
-    //enable "Vintage"
-    [
-    
-    ],
-    "tab_size": 4,
+    //enable "Vintage", and not go into insert mode by default
+    "ignored_packages": [],
+	"vintage_start_in_command_mode" : true,  //It's very useful
+
+    "tab_size" : 4,
     "translate_tabs_to_spaces": true,
     "rulers": [80, 120]
 }
