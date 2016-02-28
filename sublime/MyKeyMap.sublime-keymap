@@ -1,3 +1,21 @@
 [
-    { "keys": ["ctrl+shift+x"], "command": "exec", "args": {"kill": true} }
+    { "keys": ["ctrl+shift+x"], "command": "exec", "args": {"kill": true} },
+
+    // keep same with MacOXS 
+    { "keys": ["ctrl+alt+["], "command": "fold" },
+    { "keys": ["ctrl+alt+]"], "command": "unfold" },
+
+    // use ctrl to mock the `cmd+shift+]` in MacOXS
+    { "keys": ["ctrl+shift+]"], "command": "next_view" },
+    { "keys": ["ctrl+shift+["], "command": "prev_view" },
+
+    // overide the ctrl+tab, let it do nothing
+    { "keys": ["ctrl+tab"], "command": "do_nothing" },
+    //{ "keys": ["ctrl+shift+tab"], "command": "prev_view_in_stack" }
+
+    // mock the CMD+Shift+O to open file in IDEA
+    { "keys": ["ctrl+shift+o"], "command": "show_overlay", "args": {"overlay": "goto", "show_files": true} },
+
+    // mock the CMD+shift+A to open action in IDEA
+    { "keys": ["ctrl+shift+a"], "command": "show_overlay", "args": {"overlay": "command_palette"} }
 ]
