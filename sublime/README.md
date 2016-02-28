@@ -31,7 +31,7 @@ More details : see [1][ref1] and [2][ref2]
 
 #### User Setting
 
-`Ctrl-P`-> `user`
+`Ctrl-Shift-P`-> `user`
 
 The 4 space per tab 
 
@@ -79,14 +79,14 @@ Download from [wbond site][pkgctr]
 
 #### Install Md extend syntax highlight
 
-- Install : `CMD-P` -> enter `pkgin` -> enter `markdownextend`
+- Install : `CMD-Shift+P` -> enter `pkgin` -> enter `markdownextend`
 
 - Make it default : `View -> Syntax -> Open all with current extension as... -> Markdown Extended`
 
 #### Install Md preview 
 
-- Install : `CMD-P` -> enter `pkgin` -> enter `markdownpreview`
-- Usage : `Ctrl-P` (Windows/Linux) or `CMD-P` (Mac) -> enter `prewb`
+- Install : `CMD-Shift-P` -> enter `pkgin` -> enter `markdownpreview`
+- Usage : `Ctrl-Shift-P` (Windows/Linux) or `CMD-Shift-P` (Mac) -> enter `prewb`
 
 #### Console 
 
@@ -96,9 +96,9 @@ Download from [wbond site][pkgctr]
 
 Sometimes, you may want a os terminal inside your working folder, here a plugin called [sublime_terminal][s_t] is.
 
-- Install : `Ctrl-P` -> `pkgin` -> `terminal`
+- Install : `Ctrl-SHIFT-P` -> `pkgin` -> `terminal`
 - Usage : 
-    - `Ctrl-T` open under your file
+    - `Ctrl-SHIFT-T` open under your file
     - `Ctrl-Alt-T` open under your project 
 
 [s_t]: https://github.com/wbond/sublime_terminal
