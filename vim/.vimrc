@@ -13,9 +13,6 @@ set nu
 "show a ruler for cursor postion at right-hand bottom screen for ROW,COL"
 set ru
 
-"backup files saving dir"
-set backupdir=C:\Temp
-
 "open file color syntax"
 syntax on
 
@@ -45,4 +42,4 @@ set hlsearch
 set wildmenu
 
 "set to access system clipboard"
-set clipboard+=unnamed
+set clipboard=unnamedplus
