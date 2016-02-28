@@ -1,7 +1,18 @@
 [
     { "keys": ["ctrl+shift+x"], "command": "exec", "args": {"kill": true} },
 
-    // keep same with MacOXS 
+    //side bar focus and use vim hjkl 
+    { "keys": ["ctrl+1"], "command": "focus_side_bar" },
+    { "keys": ["h"], "command": "move", "args": {"by": "characters", "forward": false},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["j"], "command": "move", "args": {"by": "lines", "forward": true},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["k"], "command": "move", "args": {"by": "lines", "forward": false},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["l"], "command": "move", "args": {"by": "characters", "forward": true},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+
+    // keep same with MacOXS for fold/unford, to avoid the usage of `ctrl+shift+]/[`
     { "keys": ["ctrl+alt+["], "command": "fold" },
     { "keys": ["ctrl+alt+]"], "command": "unfold" },
 
@@ -13,9 +24,9 @@
     { "keys": ["ctrl+tab"], "command": "do_nothing" },
     //{ "keys": ["ctrl+shift+tab"], "command": "prev_view_in_stack" }
 
-    // mock the CMD+Shift+O to open file in IDEA
+    // mock the usage of CMD+Shift+O to open file in IDEA
     { "keys": ["ctrl+shift+o"], "command": "show_overlay", "args": {"overlay": "goto", "show_files": true} },
 
-    // mock the CMD+shift+A to open action in IDEA
+    // mock the usage of CMD+shift+A to open action in IDEA
     { "keys": ["ctrl+shift+a"], "command": "show_overlay", "args": {"overlay": "command_palette"} }
 ]
