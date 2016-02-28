@@ -71,6 +71,11 @@ defaults write com.sublimetext.3 ApplePressAndHoldEnabled -bool false
 [v2_d]:https://bitbucket.org/guillermooo/vintageous/downloads/Vintageous.sublime-package
 [key_repeat]:https://gist.github.com/kconragan/2510186
 
+
+#### Console 
+
+``Ctrl-` `` will open a python console (with embeded inside sublime).
+
 #### Install Package Installer
 
 Download from [wbond site][pkgctr]
@@ -88,10 +93,6 @@ Download from [wbond site][pkgctr]
 - Install : `CMD-Shift-P` -> enter `pkgin` -> enter `markdownpreview`
 - Usage : `Ctrl-Shift-P` (Windows/Linux) or `CMD-Shift-P` (Mac) -> enter `prewb`
 
-#### Console 
-
-``Ctrl-` `` will open a python console (with embeded inside sublime).
-
 #### Terminal
 
 Sometimes, you may want a os terminal inside your working folder, here a plugin called [sublime_terminal][s_t] is.
@@ -103,6 +104,10 @@ Sometimes, you may want a os terminal inside your working folder, here a plugin 
 
 [s_t]: https://github.com/wbond/sublime_terminal
 
+
+#### Git Glutter
+- Install : `Ctrl-Shift-p` -> 'pkgin' -. 'git-glutter'
+Show git-diff in your glutter
 
 #### Git plugin
 
