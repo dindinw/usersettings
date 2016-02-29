@@ -1,0 +1,19 @@
+[
+    // side bar focus, use alt+1 to mack `cmd+1` in Mac IDEA
+    { "keys": ["command+1"], "command": "focus_side_bar" },
+    // side bar nav, use vim hjkl favor  
+    { "keys": ["h"], "command": "move", "args": {"by": "characters", "forward": false},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["j"], "command": "move", "args": {"by": "lines", "forward": true},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["k"], "command": "move", "args": {"by": "lines", "forward": false},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["l"], "command": "move", "args": {"by": "characters", "forward": true},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    
+    // find/open any file, mock the usage of `CMD+Shift+O` in Mac IDEA
+    { "keys": ["command+shift+o"], "command": "show_overlay", "args": {"overlay": "goto", "show_files": true} },
+
+    // find/exec any action, mock the usage of `CMD+shift+A` in Mac IDEA
+    { "keys": ["command+shift+a"], "command": "show_overlay", "args": {"overlay": "command_palette"} }
+]
