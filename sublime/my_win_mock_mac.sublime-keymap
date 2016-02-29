@@ -1,0 +1,30 @@
+[
+    // side bar focus, use alt+1 to mack `cmd+1` in Mac IDEA
+    { "keys": ["alt+1"], "command": "focus_side_bar" },
+    // side bar nav, use vim hjkl favor  
+    { "keys": ["h"], "command": "move", "args": {"by": "characters", "forward": false},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["j"], "command": "move", "args": {"by": "lines", "forward": true},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["k"], "command": "move", "args": {"by": "lines", "forward": false},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+    { "keys": ["l"], "command": "move", "args": {"by": "characters", "forward": true},
+      "context": [ {"key": "control", "operand": "sidebar_tree"} ] },
+   
+    // close file, use `alt+w` close mock `cmd+w`
+    { "keys": ["alt+w"], "command": "close" },
+
+    // tab nav, use `alt+shift+]` to mock the `cmd+shift+]` in MacOXS
+    { "keys": ["alt+shift+]"], "command": "next_view" },
+    { "keys": ["alt+shift+["], "command": "prev_view" },
+
+    // tab nav, use `alt+right/left` to mock the `cmd+right/left` in Mac IDEA
+    { "keys": ["alt+right"], "command": "next_view" },
+    { "keys": ["alt+left"], "command": "prev_view" },
+
+    // find/open any file, mock the usage of `CMD+Shift+O` in Mac IDEA
+    { "keys": ["alt+shift+o"], "command": "show_overlay", "args": {"overlay": "goto", "show_files": true} },
+
+    // find/exec any action, mock the usage of `CMD+shift+A` in Mac IDEA
+    { "keys": ["alt+shift+a"], "command": "show_overlay", "args": {"overlay": "command_palette"} }
+]
