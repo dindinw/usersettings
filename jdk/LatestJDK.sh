@@ -1,18 +1,29 @@
-# Last Update : 2014-12 
-# The lastest JDK 8 from http://www.oracle.com/technetwork/java/javase/8u-relnotes-2225394.html 
+#!/usr/bin/env bash
 
-# JDK 8 8u25 b17 MAC
-# The checksum list here : https://www.oracle.com/webfolder/s/digest/8u25checksum.html
-JDK_8U25_B17_MAC_URL=http://download.oracle.com/otn-pub/java/jdk/8u25-b17/jdk-8u25-macosx-x64.dmg 
+# Last Update : 2016-02
 
-# The lastest JDK 7 from https://www.java.com/en/download/faq/release7_changes.xml 
+# JDK 8 8u73
+# The  release page : http://www.oracle.com/technetwork/java/javase/documentation/8u-relnotes-2225394.html
+# The download page : http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+# The checksum page : https://www.oracle.com/webfolder/s/digest/8u73checksum.html
+# jdk-8u73-windows-x64.exe  sha256: a4e2f75ead7c5ab09a58b6d77ff98da4b1343caaab383c4b93479dd5866212ea
+# jdk-8u73-macosx-x64.dmg  sha256: a96efc6aad18e3b49dd41f4b7a955f9ef2e01ee390987c63f5a6347026fcc336
+JDK_8U73_WIN64_URL=http://download.oracle.com/otn-pub/java/jdk/8u73-b02/jdk-8u73-windows-x64.exe
+JDK_8U73_MAC_URL=http://download.oracle.com/otn-pub/java/jdk/8u73-b02/jdk-8u73-macosx-x64.dmg
 
-# JDK 7 7u71 b14 MAC
-# The checksum list here : https://www.oracle.com/webfolder/s/digest/7u71checksum.html
-JDK_7U71_B14_MAC_URL=http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-macosx-x64.dmg 
+# The latest JDK 7
+#  release page : https://www.java.com/en/download/faq/release7_changes.xml
+# download page : http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html
+# checksum page : https://www.oracle.com/webfolder/s/digest/7u79checksum.html
+#   jdk-7u79-windows-x64.exe	6c0ea86f9c2b3c1e7d95c513785f1f55
+#   jdk-7u79-macosx-x64.dmg	e085660e60ed1325143ac5e15391ebb9
+JDK_7U79_WIN_URL=http://download.oracle.com/otn-pub/java/jdk/7u79-b15/jdk-7u79-windows-x64.exe
+JDK_7U79_MAC_URL=http://download.oracle.com/otn-pub/java/jdk/7u79-b15/jdk-7u79-macosx-x64.dmg
 
-LATEST_8_MAC_64_URL=$JDK_8U25_B17_MAC_URL
-LATEST_7_MAC_64_URL=$JDK_7U71_B14_MAC_URL
+latest_8_mac_64_url=${JDK_8U73_MAC_URL}
+latest_8_win_64_url=${JDK_8U73_WIN64_URL}
+latest_7_mac_64_url=${JDK_7U79_MAC_URL}
+latest_7_win_64_url=${JDK_7U79_WIN_URL}
 
 function usage()
 {
@@ -26,32 +37,37 @@ if [ ${#@} -ne 1 ]; then
   exit -1
 fi
 
-VERSION=$1
+version=$1
 
-OS=$2
-if [ -z $OS ]; then
-  GUESE_OS=`uname`
-  case "$GUESE_OS" in
+os=$2
+if [ -z $os ]; then
+  guese_os=`uname`
+  case "$guese_os" in
      Linux*)
-       OS="LINUX" ;;
+       os="LINUX" ;;
      Darwin*)
-       OS="MAC";;
+       os="MAC";;
+     MINGW*)
+       os="WIN";;
      *)
-      echo "UNKNOWN OS TYPE : $GUESE_OS"
+      echo "Unknown OS Type : $GUESE_OS"
       exit -1 ;;
   esac
 fi
 
-ARCH=$3
-if [ -z $ARCH ]; then
- ARCH=64
+arch=$3
+if [ -z ${arch} ]; then
+ arch=64
 fi
 
-function get_LATEST_8_MAC_64_URL(){
-   echo $LATEST_8_MAC_64_URL
+function get_latest_8_mac_64_url(){
+    echo ${latest_8_mac_64_url}
 }
-function get_LATEST_7_MAC_64_URL(){
-   echo $LATEST_7_MAC_64_URL
+function get_latest_7_mac_64_url(){
+    echo ${latest_7_mac_64_url}
+}
+function get_latest_8_win_64_url(){
+    echo ${latest_8_win_64_url}
 }
 
 DOWNLOAD_FOLDER=.
@@ -83,5 +99,5 @@ echo DOWNLOAD_URL=$DOWNLOAD_URL
 echo DOWNLOAD_FOLDER=$DOWNLOAD_FOLDER
 echo DOWNLOAD_FILE_NAME=$FILE_NAME
 
-curl -L --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" $DOWNLOAD_URL -o $DOWNLOAD_FOLDER/$FILE_NAME
+echo curl -L --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" $DOWNLOAD_URL -o $DOWNLOAD_FOLDER/$FILE_NAME
 
