@@ -71,6 +71,11 @@ defaults write com.sublimetext.3 ApplePressAndHoldEnabled -bool false
 [v2_d]:https://bitbucket.org/guillermooo/vintageous/downloads/Vintageous.sublime-package
 [key_repeat]:https://gist.github.com/kconragan/2510186
 
+#### Working in commandline
+
+```
+ln -s "/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl" ~/bin/subl
+```
 
 #### Console 
 
