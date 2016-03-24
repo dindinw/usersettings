@@ -43,7 +43,7 @@ function add_upstream() {
             case ${origin_url} in
                 *github.com*)
                     echo "origin_url  : ${origin_url}"
-                    local repo=$(basename $origin_url)
+                    local repo=$(basename $origin_url|sed s'/.git//')
                     local owner=$(basename $(dirname $origin_url))
                     echo "owner       : $owner"
                     echo "repository  : $repo"
