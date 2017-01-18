@@ -46,3 +46,5 @@ log/
 *.iml
 .idea
 
+# Vagrant
+.vagrant/
